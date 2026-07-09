@@ -221,7 +221,7 @@ function serveFile(response, pathname) {
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "Referrer-Policy": "no-referrer",
-      "Permissions-Policy": "camera=(self), geolocation=()",
+      "Permissions-Policy": "camera=(self), geolocation=(self)",
       "Cache-Control": "no-cache"
     });
     fs.createReadStream(filename).pipe(response);

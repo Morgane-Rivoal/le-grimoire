@@ -12,7 +12,13 @@ function loadCollection(){
 }
 
 function saveCollection(){
-  localStorage.setItem("grimoire-v020-collection", JSON.stringify(collection));
+  try{
+    localStorage.setItem("grimoire-v020-collection", JSON.stringify(collection));
+    return true;
+  } catch(error){
+    console.warn("Échec de l’enregistrement de l’herbier :", error);
+    return false;
+  }
 }
 
 function showToast(message, duration = 3200){

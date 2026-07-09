@@ -6,6 +6,9 @@ function plantImageMarkup(entry){
 }
 
 function plantStaticImageMarkup(plant){
+  if(!plant.illu){
+    return plantPlateMarkup(plant);
+  }
   return `<img src="${safeText(plant.illu)}" alt="${safeText(t("image.illustrationOf", {name:plant.name}))}" loading="lazy" decoding="async">`;
 }
 

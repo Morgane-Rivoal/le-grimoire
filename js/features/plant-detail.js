@@ -7,6 +7,97 @@ function valueOrTodo(value){
   return value && String(value).trim() ? value : t("common.complete");
 }
 
+async function sharePlantSheet(name, latin, summary){
+  const text = `${name} (${latin}) — ${summary}\n\n${t("safety.disclaimer")}\n\n${t("app.title")} : ${location.origin}`;
+  if(navigator.share){
+    try{
+      await navigator.share({title: t("app.title"), text});
+    } catch{
+      // Partage annulé par l’utilisateur : aucune action nécessaire.
+    }
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast(t("alert.shareCopied"));
+  } catch{
+    showToast(t("alert.shareUnavailable"));
+  }
+}
+
+function shareLocalPlant(id){
+  const sourcePlant = plants.find(p => p.id === id);
+  if(!sourcePlant) return;
+  const plant = localizedPlant(sourcePlant);
+  sharePlantSheet(plant.name, plant.latin, plant.summary);
+}
+
+function shareIdentifiedPlant(id){
+  const entry = collection[id];
+  if(!entry) return;
+  const localPlant = plants.find(plant => plant.id === entry.localPlantId);
+  const profile = knowledgeForSpecies(entry, localPlant);
+  sharePlantSheet(entry.name, entry.latin, profile.summary);
+}
+
+function locationMapMarkup(lat, lon){
+  if(lat === "" || lon === "" || lat === undefined || lon === undefined || Number.isNaN(lat) || Number.isNaN(lon)){
+    return "";
+  }
+  const delta = 0.01;
+  const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
+  const osmUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;
+  return `
+    <div class="observation-map">
+      <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${safeText(bbox)}&marker=${safeText(lat)}%2C${safeText(lon)}" loading="lazy" title="${safeText(t("plant.mapTitle"))}"></iframe>
+      <a href="${safeText(osmUrl)}" target="_blank" rel="noopener noreferrer">${t("plant.viewOnMap")}</a>
+    </div>
+  `;
+}
+
+function locationFieldsMarkup(entry){
+  const lat = entry?.lat ?? "";
+  const lon = entry?.lon ?? "";
+  return `
+    <div class="place-row">
+      <input id="placeInput" placeholder="${t("plant.place")}" value="${safeText(entry?.place || "")}">
+      <button type="button" class="icon-button" onclick="captureLocation()" aria-label="${t("plant.useMyLocation")}">📍</button>
+    </div>
+    <input type="hidden" id="latInput" value="${safeText(lat)}">
+    <input type="hidden" id="lonInput" value="${safeText(lon)}">
+    <div id="locationMap">${locationMapMarkup(lat, lon)}</div>
+  `;
+}
+
+function captureLocation(){
+  if(!("geolocation" in navigator)){
+    showToast(t("plant.locationUnavailable"));
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      document.getElementById("latInput").value = lat;
+      document.getElementById("lonInput").value = lon;
+      const placeInput = document.getElementById("placeInput");
+      if(placeInput && !placeInput.value.trim()){
+        placeInput.value = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+      }
+      const mapMount = document.getElementById("locationMap");
+      if(mapMount) mapMount.innerHTML = locationMapMarkup(lat, lon);
+      showToast(t("plant.locationCaptured"));
+    },
+    () => showToast(t("plant.locationDenied")),
+    {enableHighAccuracy:false, timeout:8000}
+  );
+}
+
+function readCoordInput(id){
+  const raw = document.getElementById(id)?.value;
+  return raw !== "" && raw != null ? parseFloat(raw) : undefined;
+}
+
 function identityMarkup(fields){
   return `
     <div class="identity">
@@ -81,7 +172,10 @@ function openIdentifiedPlant(id){
   mount.innerHTML = `
     <div class="topbar">
       <button class="back" onclick="goBack('herbier')" aria-label="Retour">‹</button>
-      <button class="secondary" onclick="deleteIdentifiedPlant('${id}')">${t("common.remove")}</button>
+      <div class="topbar-actions">
+        <button class="icon-button" onclick="shareIdentifiedPlant('${id}')" aria-label="${t("action.share")}">🔗</button>
+        <button class="secondary" onclick="deleteIdentifiedPlant('${id}')">${t("common.remove")}</button>
+      </div>
     </div>
 
     <div class="plate">${plantPlateMarkup(entry)}</div>
@@ -122,7 +216,7 @@ function openIdentifiedPlant(id){
 
     <div class="note-form">
       <p class="kicker">${t("section.notes")}</p>
-      <input id="placeInput" placeholder="${t("plant.place")}" value="${safeText(entry.place || "")}">
+      ${locationFieldsMarkup(entry)}
       <input id="dateInput" type="date" value="${safeText(entry.date || "")}">
       <textarea id="noteInput" placeholder="${t("plant.notes")}">${safeText(entry.note || "")}</textarea>
       <button class="danger" onclick="saveIdentifiedPersonal('${id}')">${t("common.save")}</button>
@@ -181,7 +275,12 @@ function saveIdentifiedPersonal(id){
   entry.place = document.getElementById("placeInput").value;
   entry.date = document.getElementById("dateInput").value;
   entry.note = document.getElementById("noteInput").value;
-  saveCollection();
+  entry.lat = readCoordInput("latInput");
+  entry.lon = readCoordInput("lonInput");
+  if(!saveCollection()){
+    showToast(t("alert.saveFailed"), 5000);
+    return;
+  }
   renderPlants();
   showToast(t("alert.observationSaved"));
   openIdentifiedPlant(id);
@@ -190,9 +289,14 @@ function saveIdentifiedPersonal(id){
 function deleteIdentifiedPlant(id){
   if(!collection[id] || collection[id].type !== "identification") return;
   if(!confirm(t("confirm.remove"))) return;
+  const removed = collection[id];
   delete collection[id];
+  if(!saveCollection()){
+    collection[id] = removed;
+    showToast(t("alert.saveFailed"), 5000);
+    return;
+  }
   deleteObservationPhoto(id).catch(() => {});
-  saveCollection();
   renderPlants();
   go("herbier");
 }
@@ -207,7 +311,10 @@ function openPlant(id){
   mount.innerHTML = `
     <div class="topbar">
       <button class="back" onclick="goBack('explorer')" aria-label="Retour">‹</button>
-      <button class="secondary" onclick="toggleCollection('${plant.id}')">${t(saved ? "plant.inHerbarium" : "plant.addHerbarium")}</button>
+      <div class="topbar-actions">
+        <button class="icon-button" onclick="shareLocalPlant('${plant.id}')" aria-label="${t("action.share")}">🔗</button>
+        <button class="secondary" onclick="toggleCollection('${plant.id}')">${t(saved ? "plant.inHerbarium" : "plant.addHerbarium")}</button>
+      </div>
     </div>
 
     <div class="plate">${plantStaticImageMarkup(plant)}</div>
@@ -245,7 +352,7 @@ function openPlant(id){
 
     <div class="note-form">
       <p class="kicker">${t("plant.personalPage")}</p>
-      <input id="placeInput" placeholder="${t("plant.place")}" value="${safeText(saved?.place || "")}">
+      ${locationFieldsMarkup(saved)}
       <input id="dateInput" type="date" value="${saved?.date || ""}">
       <textarea id="noteInput" placeholder="${t("plant.notes")}">${safeText(saved?.note || "")}</textarea>
       <div class="personal-photo">${t("plant.personalPhotoSoon")}</div>
@@ -262,24 +369,37 @@ function refreshCurrentPlantView(){
 }
 
 function toggleCollection(id){
-  if(collection[id]){
+  const wasSaved = collection[id];
+  const previous = wasSaved ? { ...collection[id] } : null;
+  if(wasSaved){
     delete collection[id];
-    showToast(t("alert.pageRemoved"));
   } else {
-    collection[id] = {place:"", date:"", note:""};
-    showToast(t("alert.pageAdded"));
+    collection[id] = {place:"", date:"", note:"", createdAt: new Date().toISOString()};
   }
-  saveCollection();
+  if(!saveCollection()){
+    if(previous) collection[id] = previous; else delete collection[id];
+    showToast(t("alert.saveFailed"), 5000);
+    return;
+  }
+  showToast(t(wasSaved ? "alert.pageRemoved" : "alert.pageAdded"));
   openPlant(id);
 }
 
 function savePersonal(id){
+  const previous = collection[id] ? { ...collection[id] } : null;
   collection[id] = {
     place: document.getElementById("placeInput").value,
     date: document.getElementById("dateInput").value,
-    note: document.getElementById("noteInput").value
+    note: document.getElementById("noteInput").value,
+    lat: readCoordInput("latInput"),
+    lon: readCoordInput("lonInput"),
+    createdAt: previous?.createdAt || new Date().toISOString()
   };
-  saveCollection();
+  if(!saveCollection()){
+    if(previous) collection[id] = previous; else delete collection[id];
+    showToast(t("alert.saveFailed"), 5000);
+    return;
+  }
   showToast(t("alert.personalSaved"));
   openPlant(id);
 }

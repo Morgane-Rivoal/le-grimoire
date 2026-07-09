@@ -76,6 +76,9 @@
       <button class="chip" data-filter="prudence" onclick="setFilter('prudence')" data-i18n="filter.caution"></button>
       <button class="chip" data-filter="aromatique" onclick="setFilter('aromatique')" data-i18n="filter.aromatic"></button>
     </div>
+    <button id="bloomToggle" class="chip bloom-toggle" onclick="toggleBloomingNow()" aria-pressed="false">
+      <span aria-hidden="true">🌸</span> <span data-i18n="filter.bloomingNow">En fleur ce mois-ci</span>
+    </button>
     <div id="plantGrid" class="grid"></div>
   </div>
 </section>
@@ -151,6 +154,13 @@
       <button class="chip herbarium-chip" data-herbarium-filter="comestible" onclick="setHerbariumFilter('comestible')" data-i18n="filter.edible"></button>
       <button class="chip herbarium-chip" data-herbarium-filter="prudence" onclick="setHerbariumFilter('prudence')" data-i18n="filter.caution"></button>
       <button class="chip herbarium-chip" data-herbarium-filter="medicinal" onclick="setHerbariumFilter('medicinal')" data-i18n="filter.medicinal"></button>
+    </div>
+    <div class="sort-row">
+      <label for="herbariumSort" data-i18n="herbarium.sortLabel">Trier par</label>
+      <select id="herbariumSort" onchange="setHerbariumSort(this.value)">
+        <option value="recent" data-i18n="herbarium.sortRecent">Plus récent</option>
+        <option value="alpha" data-i18n="herbarium.sortAlpha">Alphabétique</option>
+      </select>
     </div>
     <div id="collectionGrid" class="grid"></div>
     <p id="emptyHerbier" class="small-note" data-i18n="herbarium.empty"></p>

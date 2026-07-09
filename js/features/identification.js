@@ -299,7 +299,11 @@ async function saveIdentifiedPlant(index, useCorrection = false){
     knowledgeSource: profile.source
   };
 
-  saveCollection();
+  if(!saveCollection()){
+    delete collection[id];
+    showToast(t("alert.saveFailed"), 5000);
+    return;
+  }
   if(currentObservationBlob){
     try{
       await storeObservationPhoto(id, currentObservationBlob);

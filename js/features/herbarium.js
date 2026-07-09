@@ -1,5 +1,6 @@
-// Carnet Herbier : recherche, filtres et grille des plantes sauvegardées.
+// Carnet Herbier : recherche, filtres, tri et grille des plantes sauvegardées.
 let herbariumFilter = "all";
+let herbariumSort = "recent";
 let collectionRenderTimer = null;
 
 function scheduleCollectionRender(){
@@ -13,6 +14,31 @@ function setHerbariumFilter(filter){
     chip.classList.toggle("active", chip.dataset.herbariumFilter === filter)
   );
   renderCollection();
+}
+
+function setHerbariumSort(sort){
+  herbariumSort = sort === "alpha" ? "alpha" : "recent";
+  renderCollection();
+}
+
+function herbariumEntryName(id, entry){
+  if(entry?.type === "identification") return entry.name || "";
+  const sourcePlant = plants.find(p => p.id === id);
+  return sourcePlant ? localizedPlant(sourcePlant).name : "";
+}
+
+function herbariumEntryCreatedAt(entry){
+  return entry?.createdAt || "1970-01-01T00:00:00.000Z";
+}
+
+function sortHerbariumIds(ids){
+  const sorted = [...ids];
+  if(herbariumSort === "alpha"){
+    sorted.sort((a, b) => herbariumEntryName(a, collection[a]).localeCompare(herbariumEntryName(b, collection[b]), currentLocale));
+  } else {
+    sorted.sort((a, b) => herbariumEntryCreatedAt(collection[b]).localeCompare(herbariumEntryCreatedAt(collection[a])));
+  }
+  return sorted;
 }
 
 function isMedicinalText(text){
@@ -73,7 +99,7 @@ function renderCollection(){
   const query = document.getElementById("herbariumSearch")?.value?.toLowerCase().trim() || "";
   grid.innerHTML = "";
   const fragment = document.createDocumentFragment();
-  const ids = Object.keys(collection).filter(id => herbariumEntryMatches(id, collection[id], query));
+  const ids = sortHerbariumIds(Object.keys(collection).filter(id => herbariumEntryMatches(id, collection[id], query)));
   empty.style.display = ids.length ? "none" : "block";
   ids.forEach(id => {
     const personal = collection[id];

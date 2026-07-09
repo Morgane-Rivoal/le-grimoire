@@ -1,6 +1,60 @@
 // Bibliothèque des plantes : recherche, filtres et grille de l’écran Explorer.
 let currentFilter = "all";
 let plantRenderTimer = null;
+let bloomingNowOnly = false;
+
+const MONTH_NAMES = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const SEASON_MONTHS = {
+  "printemps":[3,4,5],
+  "été":[6,7,8],
+  "automne":[9,10,11],
+  "hiver":[12,1,2]
+};
+
+function findWordPosition(normalized, word){
+  const match = new RegExp(`(?<![\\p{L}])${word}(?![\\p{L}])`, "u").exec(normalized);
+  return match ? match.index : -1;
+}
+
+function floweringMonths(text){
+  if(!text) return [];
+  const normalized = text.toLowerCase();
+  const found = [];
+  MONTH_NAMES.forEach((name, index) => {
+    const pos = findWordPosition(normalized, name);
+    if(pos !== -1) found.push({month: index + 1, pos});
+  });
+  Object.entries(SEASON_MONTHS).forEach(([season, months]) => {
+    const pos = findWordPosition(normalized, season);
+    if(pos !== -1) found.push({month: months[0], endMonth: months[months.length - 1], pos});
+  });
+  if(!found.length) return [];
+  found.sort((a, b) => a.pos - b.pos);
+  const first = found[0];
+  const last = found[found.length - 1];
+  const startMonth = first.month;
+  const endMonth = last.endMonth ?? last.month;
+  const months = [startMonth];
+  let month = startMonth;
+  while(month !== endMonth && months.length <= 12){
+    month = month === 12 ? 1 : month + 1;
+    months.push(month);
+  }
+  return months;
+}
+
+function isBloomingNow(floweringText, referenceDate = new Date()){
+  const months = floweringMonths(floweringText);
+  return months.includes(referenceDate.getMonth() + 1);
+}
+
+function toggleBloomingNow(){
+  bloomingNowOnly = !bloomingNowOnly;
+  const toggle = document.getElementById("bloomToggle");
+  toggle.classList.toggle("active", bloomingNowOnly);
+  toggle.setAttribute("aria-pressed", String(bloomingNowOnly));
+  renderPlants();
+}
 
 function schedulePlantRender(){
   clearTimeout(plantRenderTimer);
@@ -16,7 +70,8 @@ function setFilter(filter){
 function plantMatches(plant, query){
   const haystack = [plant.name, plant.latin, plant.family, plant.summary, plant.recognition, plant.cuisine].join(" ").toLowerCase();
   const filterOk = currentFilter === "all" || plant.status === currentFilter || plant.tags.includes(currentFilter);
-  return filterOk && haystack.includes(query);
+  const bloomOk = !bloomingNowOnly || isBloomingNow(plant.flowering);
+  return filterOk && bloomOk && haystack.includes(query);
 }
 
 function identifiedPlantMatches(entry, query){
@@ -38,7 +93,9 @@ function identifiedPlantMatches(entry, query){
     status === currentFilter ||
     (currentFilter === "prudence" && status !== "comestible") ||
     (currentFilter === "aromatique" && localPlant?.tags?.includes("aromatique"));
-  return filterOk && haystack.includes(query);
+  const floweringText = localPlant ? localizedPlant(localPlant).flowering : entry.flowering;
+  const bloomOk = !bloomingNowOnly || isBloomingNow(floweringText);
+  return filterOk && bloomOk && haystack.includes(query);
 }
 
 function renderPlants(){
