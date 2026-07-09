@@ -14,13 +14,10 @@
 - Cartes du sommaire converties en boutons accessibles au clavier.
 - Styles intégrés à la page déplacés dans la feuille CSS.
 
+## Refactoring appliqué — juillet 2026
+
+`js/app.js` a été découpé en modules, comme recommandé ci-dessus : `core/utils.js`, `core/state.js`, `core/navigation.js`, `features/knowledge.js`, `features/explorer.js`, `features/identification.js`, `features/plant-detail.js`, `features/herbarium.js`, et `init.js` pour le rendu initial. Voir `docs/ARCHITECTURE.md` pour le détail de chaque fichier.
+
 ## Prochain refactoring recommandé
-
-`js/app.js` concentre encore la navigation, l’identification, l’herbier et le rendu des fiches. Avant d’ajouter beaucoup de fonctions natives, le découper en quatre modules :
-
-1. `core/navigation.js`
-2. `features/explorer.js`
-3. `features/identification.js`
-4. `features/herbarium.js`
 
 La migration vers IndexedDB devra précéder le stockage de photos personnelles : `localStorage` convient aux notes courtes, pas aux images.

@@ -33,8 +33,11 @@
 
 <section id="preface" class="screen">
   <div class="page">
-    <p class="kicker" data-i18n="preface.kicker">Première page</p>
-    <h2 data-i18n="preface.title">Préface</h2>
+    <div class="topbar">
+      <button class="back" onclick="goBack('cover')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="preface.kicker">Première page</p><h2 data-i18n="preface.title">Préface</h2></div>
+      <span></span>
+    </div>
     <p data-i18n="preface.welcome">Bienvenue, Botaniste.</p>
     <p data-i18n="preface.p1"></p>
     <p data-i18n="preface.p2"></p>
@@ -60,7 +63,7 @@
 <section id="explorer" class="screen">
   <div class="page">
     <div class="topbar">
-      <button class="back" onclick="go('sommaire')">‹</button>
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
       <div><p class="kicker" data-i18n="explore.kicker"></p><h2 data-i18n="nav.explore"></h2></div>
       <span></span>
     </div>
@@ -80,7 +83,7 @@
 <section id="identifier" class="screen">
   <div class="page">
     <div class="topbar">
-      <button class="back" onclick="go('sommaire')">‹</button>
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
       <div><p class="kicker" data-i18n="identify.kicker"></p><h2 data-i18n="nav.identify"></h2></div>
       <span></span>
     </div>
@@ -107,8 +110,11 @@
 
 <section id="loading" class="screen">
   <div class="page page-centered">
-    <p class="kicker" data-i18n="loading.kicker"></p>
-    <h2 data-i18n="loading.title"></h2>
+    <div class="topbar">
+      <button class="back" onclick="goBack('identifier')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="loading.kicker"></p><h2 data-i18n="loading.title"></h2></div>
+      <span></span>
+    </div>
     <div class="loading-ring"></div>
     <p data-i18n="loading.text"></p>
   </div>
@@ -116,8 +122,11 @@
 
 <section id="result" class="screen">
   <div class="page result-card">
-    <p class="kicker" data-i18n="result.kicker"></p>
-    <h2 data-i18n="result.title"></h2>
+    <div class="topbar">
+      <button class="back" onclick="goBack('identifier')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="result.kicker"></p><h2 data-i18n="result.title"></h2></div>
+      <span></span>
+    </div>
     <p data-i18n="result.intro"></p>
     <div id="identificationResults" class="identification-list"></div>
     <button class="secondary" onclick="go('identifier')" data-i18n="result.retry"></button>
@@ -132,7 +141,7 @@
 <section id="herbier" class="screen">
   <div class="page">
     <div class="topbar">
-      <button class="back" onclick="go('sommaire')">‹</button>
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
       <div><p class="kicker" data-i18n="herbarium.kicker"></p><h2 data-i18n="herbarium.title"></h2></div>
       <span></span>
     </div>
@@ -151,7 +160,7 @@
 <section id="parametres" class="screen">
   <div class="page">
     <div class="topbar">
-      <button class="back" onclick="go('sommaire')">‹</button>
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
       <div><p class="kicker" data-i18n="settings.kicker">Réglages</p><h2 data-i18n="settings.title">Paramètres</h2></div>
       <span></span>
     </div>
@@ -187,7 +196,15 @@
 <script src="js/data/content-en.js" charset="UTF-8"></script>
 <script src="js/storage/photos.js" charset="UTF-8"></script>
 <script src="js/ui/plant-plates.js" charset="UTF-8"></script>
-<script src="js/app.js" charset="UTF-8"></script>
+<script src="js/core/utils.js" charset="UTF-8"></script>
+<script src="js/core/state.js" charset="UTF-8"></script>
+<script src="js/core/navigation.js" charset="UTF-8"></script>
+<script src="js/features/knowledge.js" charset="UTF-8"></script>
+<script src="js/features/explorer.js" charset="UTF-8"></script>
+<script src="js/features/identification.js" charset="UTF-8"></script>
+<script src="js/features/plant-detail.js" charset="UTF-8"></script>
+<script src="js/features/herbarium.js" charset="UTF-8"></script>
+<script src="js/init.js" charset="UTF-8"></script>
 <script src="js/pwa.js" charset="UTF-8"></script>
 </body>
 </html>

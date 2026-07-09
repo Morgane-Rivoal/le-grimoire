@@ -8,7 +8,15 @@
 - `js/data/plants.js` : base locale des plantes du Grimoire.
 - `js/data/knowledge-profiles.js` : profils automatiques pour générer les fiches après Pl@ntNet.
 - `js/ui/plant-plates.js` : moteur de planches botaniques pour les plantes ajoutées par l’utilisateur.
-- `js/app.js` : navigation, recherche, identification, enregistrement et herbier.
+- `js/core/utils.js` : utilitaires génériques (échappement HTML).
+- `js/core/state.js` : persistance de l’herbier (`localStorage`) et notifications toast.
+- `js/core/navigation.js` : changement d’écran et pile d’historique pour le retour arrière (`go` / `goBack`).
+- `js/features/knowledge.js` : moteur de connaissance qui construit une fiche fiable (plante locale, profil connu ou fiche prudente générique).
+- `js/features/explorer.js` : recherche, filtres et grille de l’écran Explorer.
+- `js/features/identification.js` : sélection des photos, appel Pl@ntNet et rendu des résultats.
+- `js/features/plant-detail.js` : rendu de la fiche plante (locale ou observée) et notes personnelles.
+- `js/features/herbarium.js` : recherche, filtres et grille de l’écran Herbier.
+- `js/init.js` : rendu initial et nettoyage des ressources temporaires au déchargement de la page.
 - `assets/illustrations/` : fichiers SVG des plantes de base.
 - `manifest.webmanifest` : identité et paramètres d’installation de la PWA.
 - `service-worker.js` : cache hors ligne de l’application et des illustrations.
