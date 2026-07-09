@@ -3,6 +3,9 @@ let currentFilter = "all";
 let collection = loadCollection();
 let currentReliableIdentifications = [];
 let currentPlantView = null;
+let currentObservationBlob = null;
+let activeObservationPhotoUrl = null;
+const enrichmentRequests = new Set();
 let currentScreenId = "cover";
 let plantRenderTimer = null;
 const screenScrollPositions = new Map();
@@ -124,6 +127,7 @@ function renderPlants(){
 }
 
 let previewUrls = [];
+let currentPredictedOrgans = [];
 const acceptedImageTypes = ["image/jpeg", "image/png", "image/webp"];
 const minimumPlantNetScore = 0.2;
 
@@ -242,7 +246,7 @@ function fallbackKnowledge(entry){
 function knowledgeForSpecies(entry, localPlant){
   if(localPlant){
     const plant = localizedPlant(localPlant);
-    return {
+    return mergeEnrichment({
       edibility: plant.status === "comestible" ? t("status.edible") : t("status.caution"),
       status: plant.status,
       summary: plant.summary,
@@ -251,19 +255,42 @@ function knowledgeForSpecies(entry, localPlant){
       precautions: plant.precautions,
       note: plant.anecdote,
       source: plant.source
-    };
+    }, entry);
   }
 
   const haystack = `${entry.name} ${entry.latin} ${entry.shortLatin} ${entry.family}`.toLowerCase();
   const plantProfile = plantKnowledgeProfiles.find(profile =>
     profile.match.some(value => haystack.includes(value))
   );
-  if(plantProfile) return localizedKnowledge(plantProfile);
+  if(plantProfile) return mergeEnrichment(localizedKnowledge(plantProfile), entry);
 
   const familyProfile = familyKnowledgeProfiles.find(profile =>
     profile.match.some(value => haystack.includes(value))
   );
-  return familyProfile ? localizedKnowledge(familyProfile) : fallbackKnowledge(entry);
+  const profile = familyProfile ? localizedKnowledge(familyProfile) : fallbackKnowledge(entry);
+  return mergeEnrichment(profile, entry);
+}
+
+function mergeEnrichment(profile, entry){
+  const enrichment = entry?.enrichment;
+  if(!enrichment) return profile;
+  const mentionsToxicity = /tox|poison/i.test(enrichment.safetyNote || "");
+  const mentionsFoodUse = /comest|edible|alimentaire|consum/i.test(enrichment.safetyNote || "");
+  const genericStatus = profile.status === "inconnu";
+  return {
+    ...profile,
+    edibility: genericStatus && mentionsToxicity
+      ? t("status.toxicityReported")
+      : genericStatus && mentionsFoodUse
+      ? t("status.foodUseReported")
+      : profile.edibility,
+    status: genericStatus && (mentionsToxicity || mentionsFoodUse) ? "prudence" : profile.status,
+    consumption: enrichment.safetyNote || profile.edibility,
+    summary: enrichment.summary || profile.summary,
+    source: enrichment.sourceLabel
+      ? `${profile.source} ${enrichment.sourceLabel}.`
+      : profile.source
+  };
 }
 
 function botanicalNoteFor(entry, profile, localPlant){
@@ -316,6 +343,9 @@ function botanicalNoteFor(entry, profile, localPlant){
 
 function recognitionTextFor(entry, localPlant){
   if(localPlant?.recognition) return localPlant.recognition;
+  if(entry?.enrichment?.recognition){
+    return `${entry.enrichment.recognition} ${t("recognition.matchNote", {score:entry.score || "—"})}`;
+  }
   const haystack = `${entry.name || ""} ${entry.latin || ""} ${entry.shortLatin || ""} ${entry.family || ""}`.toLowerCase();
   if(haystack.includes("pinaceae") || haystack.includes("picea") || haystack.includes("pinus") || haystack.includes("abies") || haystack.includes("epicea") || haystack.includes("sapin") || haystack.includes("pin ")){
     return t("recognition.conifer", {score:entry.score || "—"});
@@ -356,7 +386,8 @@ function renderIdentificationResults(results){
       name: commonName,
       latin: scientificName,
       shortLatin: species.scientificNameWithoutAuthor || scientificName,
-      family
+      family,
+      enrichment: result.enrichment || null
     }, localPlant);
     const card = document.createElement("article");
     card.className = "identification-choice";
@@ -370,6 +401,12 @@ function renderIdentificationResults(results){
         <p class="latin">${safeText(scientificName)}</p>
         ${family ? `<p class="small-note">${safeText(family)}</p>` : ""}
         <p class="score">${t("result.confidence", {score})}</p>
+        ${result.enrichment?.height || result.enrichment?.flowering ? `
+          <div class="result-facts">
+            ${result.enrichment.height ? `<span><strong>${t("field.height")}</strong>${safeText(result.enrichment.height)}</span>` : ""}
+            ${result.enrichment.flowering ? `<span><strong>${t("field.flowering")}</strong>${safeText(result.enrichment.flowering)}</span>` : ""}
+          </div>
+        ` : ""}
         <p class="small-note">${safeText(profile.summary)}</p>
         <p class="small-note"><strong>${t("result.remember")}</strong> ${safeText(profile.edibility)}</p>
         <button class="danger" onclick="saveIdentifiedPlant(${index})">${t("result.save")}</button>
@@ -404,6 +441,7 @@ async function observePlant(event){
 
   try{
     const preparedFiles = await Promise.all(files.map(prepareImageForPlantNet));
+    currentObservationBlob = preparedFiles[0] || null;
     preparedFiles.forEach(file => {
       formData.append("images", file, file.name);
       formData.append("organs", "auto");
@@ -415,6 +453,7 @@ async function observePlant(event){
     if(!Array.isArray(data.results) || !data.results.length){
       throw new Error(t("error.noSpecies"));
     }
+    currentPredictedOrgans = Array.isArray(data.predictedOrgans) ? data.predictedOrgans : [];
     renderIdentificationResults(data.results);
     go("result");
   } catch(error){
@@ -435,11 +474,24 @@ function speciesFromResult(result){
     shortLatin: species.scientificNameWithoutAuthor || species.scientificName || "",
     family: species.family?.scientificNameWithoutAuthor || species.family?.scientificName || "Famille non disponible",
     score: Math.round((Number(result?.score) || 0) * 100),
-    imageUrl: resultImage(result)
+    imageUrl: resultImage(result) || result?.enrichment?.imageUrl || "",
+    enrichment: result?.enrichment || null,
+    gbifId: result?.gbif?.id || "",
+    powoId: result?.powo?.id || "",
+    flowering: result?.enrichment?.flowering || "",
+    height: result?.enrichment?.height || "",
+    organ: currentPredictedOrgan()
   };
 }
 
-function saveIdentifiedPlant(index){
+function currentPredictedOrgan(){
+  return currentPredictedOrgans
+    .map(item => item?.organ)
+    .filter(Boolean)
+    .join(", ");
+}
+
+async function saveIdentifiedPlant(index){
   const result = currentReliableIdentifications[index];
   if(!result) return;
 
@@ -457,6 +509,12 @@ function saveIdentifiedPlant(index){
     family: entry.family,
     score: entry.score,
     imageUrl: entry.imageUrl,
+    enrichment: entry.enrichment,
+    gbifId: entry.gbifId,
+    powoId: entry.powoId,
+    flowering: entry.flowering,
+    height: entry.height,
+    organ: entry.organ,
     autoProfileVersion: 7,
     edibility: profile.edibility,
     safetyStatus: profile.status,
@@ -475,6 +533,15 @@ function saveIdentifiedPlant(index){
   };
 
   saveCollection();
+  if(currentObservationBlob){
+    try{
+      await storeObservationPhoto(id, currentObservationBlob);
+      collection[id].hasObservationPhoto = true;
+      saveCollection();
+    } catch{
+      collection[id].hasObservationPhoto = false;
+    }
+  }
   renderPlants();
   alert(t("alert.identificationSaved"));
   openIdentifiedPlant(id);
@@ -540,20 +607,19 @@ function openIdentifiedPlant(id){
 
     ${identityMarkup([
       {label:t("field.family"), value:entry.family},
-      {label:t("field.flowering"), value:displayPlant?.flowering},
-      {label:t("field.height"), value:displayPlant?.height},
+      {label:t("field.flowering"), value:displayPlant?.flowering || entry.flowering || t("field.variable")},
+      {label:t("field.height"), value:displayPlant?.height || entry.height || t("field.variable")},
       {label:t("field.status"), value:profile.edibility},
       {label:t("field.source"), value:entry.source || "Pl@ntNet"},
-      {label:t("field.observation"), value:entry.date || t("common.notProvided")}
+      {label:t("field.observation"), value:entry.date || t("common.notProvided")},
+      {label:t("field.organ"), value:entry.organ || t("common.notProvided")}
     ])}
 
     ${unifiedFicheSections({
       summary: profile.summary,
       recognition: recognitionTextFor(entry, localPlant),
-      photo: entry.imageUrl
-        ? `<div class="photo-preview"><img src="${safeText(entry.imageUrl)}" alt="${safeText(t("photo.observationAlt", {name:entry.name}))}"></div>`
-        : `<p>${safeText(t("photo.none"))}</p>`,
-      consumption: profile.edibility,
+      photo: `<div id="observationPhotoMount"><p>${safeText(t("photo.loading"))}</p></div>`,
+      consumption: profile.consumption || profile.edibility,
       benefits: profile.benefits,
       care: profile.care,
       precautions: profile.precautions,
@@ -571,6 +637,50 @@ function openIdentifiedPlant(id){
     </div>
   `;
   go("plantPage");
+  hydrateObservationPhoto(id, entry);
+  refreshMissingEnrichment(id, entry);
+}
+
+async function refreshMissingEnrichment(id, entry){
+  if(entry.enrichment || enrichmentRequests.has(id) || !entry.shortLatin) return;
+  enrichmentRequests.add(id);
+  try{
+    const response = await fetch(`/api/species-info?name=${encodeURIComponent(entry.shortLatin)}&lang=${encodeURIComponent(currentLocale)}`);
+    if(!response.ok) return;
+    const enrichment = await response.json();
+    entry.enrichment = enrichment;
+    entry.flowering = enrichment.flowering || entry.flowering || "";
+    entry.height = enrichment.height || entry.height || "";
+    if(!entry.imageUrl && enrichment.imageUrl) entry.imageUrl = enrichment.imageUrl;
+    saveCollection();
+    if(currentPlantView?.type === "identification" && currentPlantView.id === id){
+      openIdentifiedPlant(id);
+    }
+  } catch{
+    // La fiche prudente reste utilisable si la source encyclopédique est indisponible.
+  } finally {
+    enrichmentRequests.delete(id);
+  }
+}
+
+async function hydrateObservationPhoto(id, entry){
+  const mount = document.getElementById("observationPhotoMount");
+  if(!mount) return;
+  if(activeObservationPhotoUrl){
+    URL.revokeObjectURL(activeObservationPhotoUrl);
+    activeObservationPhotoUrl = null;
+  }
+  try{
+    const blob = await getObservationPhoto(id);
+    if(blob){
+      activeObservationPhotoUrl = URL.createObjectURL(blob);
+      mount.innerHTML = `<div class="observation-photo"><img src="${activeObservationPhotoUrl}" alt="${safeText(t("photo.observationAlt", {name:entry.name}))}"><span>${t("photo.yours")}</span></div>`;
+      return;
+    }
+  } catch{}
+  mount.innerHTML = entry.imageUrl
+    ? `<div class="observation-photo"><img src="${safeText(entry.imageUrl)}" alt="${safeText(t("photo.compareAlt", {name:entry.name}))}"><span>${t("photo.reference")}</span></div>`
+    : `<p>${safeText(t("photo.none"))}</p>`;
 }
 
 function saveIdentifiedPersonal(id){
@@ -589,6 +699,7 @@ function deleteIdentifiedPlant(id){
   if(!collection[id] || collection[id].type !== "identification") return;
   if(!confirm(t("confirm.remove"))) return;
   delete collection[id];
+  deleteObservationPhoto(id).catch(() => {});
   saveCollection();
   renderPlants();
   go("herbier");
@@ -764,6 +875,7 @@ function renderCollection(){
 
 window.addEventListener("beforeunload", () => {
   previewUrls.forEach(url => URL.revokeObjectURL(url));
+  if(activeObservationPhotoUrl) URL.revokeObjectURL(activeObservationPhotoUrl);
 });
 
 translateDocument();

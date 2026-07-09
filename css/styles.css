@@ -485,6 +485,56 @@ textarea{
   margin-bottom:18px;
 }
 
+.species-plate{
+  width:100%;
+  height:100%;
+  margin:0;
+  position:relative;
+  background:var(--parchment-light);
+}
+
+.species-plate img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.species-plate figcaption{
+  position:absolute;
+  inset:auto 12px 12px;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:9px 11px;
+  border-radius:12px;
+  color:var(--cream);
+  background:rgba(15,32,24,.84);
+  backdrop-filter:blur(6px);
+}
+
+.species-plate figcaption span{font-style:italic}
+
+.observation-photo{
+  position:relative;
+  overflow:hidden;
+  border-radius:16px;
+  background:var(--parchment-light);
+}
+
+.observation-photo img{
+  display:block;
+  width:100%;
+  max-height:420px;
+  object-fit:contain;
+}
+
+.observation-photo span{
+  display:block;
+  padding:8px 11px;
+  color:var(--muted);
+  font-size:.82rem;
+}
+
 .gallery{
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -670,6 +720,27 @@ textarea{
   color:#38523b;
   font-weight:900;
   margin:5px 0 0;
+}
+
+.result-facts{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin:8px 0;
+}
+
+.result-facts span{
+  padding:6px 8px;
+  border-radius:10px;
+  background:rgba(111,140,100,.12);
+  font-size:.78rem;
+}
+
+.result-facts strong{
+  display:block;
+  color:#735727;
+  font-size:.66rem;
+  text-transform:uppercase;
 }
 
 .error-message{

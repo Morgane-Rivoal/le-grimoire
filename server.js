@@ -44,6 +44,91 @@ function sendJson(response, status, data) {
   response.end(JSON.stringify(data));
 }
 
+function textSentences(text) {
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .match(/[^.!?]+[.!?]+/g)
+    ?.map(value => value.trim()) || [];
+}
+
+function extractHeight(text, language) {
+  const source = String(text || "").replace(/\s+/g, " ");
+  const pattern = language === "en"
+    ? /(?:grows?|reaches?|height of|tall|up to)[^.!?]{0,65}?(\d+(?:[.,]\d+)?(?:\s*(?:to|–|-)\s*\d+(?:[.,]\d+)?)?\s*(?:cm|m|metres?|meters?|feet|ft))/i
+    : /(?:atteint|mesure|hauteur de|haut(?:e)? de|peut atteindre|pouvant atteindre|jusqu['’]à)[^.!?]{0,65}?(\d+(?:[.,]\d+)?(?:\s*(?:à|–|-)\s*\d+(?:[.,]\d+)?)?\s*(?:cm|m|mètres?))/i;
+  return source.match(pattern)?.[1] || "";
+}
+
+function extractFlowering(text, language) {
+  const source = String(text || "").replace(/\s+/g, " ");
+  const cue = language === "en" ? /flower(?:s|ing)?|bloom(?:s|ing)?/i : /floraison|fleurit|fleurissent/i;
+  const sentence = source.match(/[^.!?]+[.!?]+/g)?.find(value => cue.test(value));
+  if (!sentence || sentence.length > 220) return "";
+  return sentence.trim();
+}
+
+function extractSafetyNote(text, language) {
+  const source = String(text || "").replace(/\s+/g, " ");
+  const cue = language === "en"
+    ? /toxic|poison|edible|inedible|consum/i
+    : /toxique|poison|comestible|consomm|alimentaire/i;
+  const sentence = source.match(/[^.!?]+[.!?]+/g)?.find(value => cue.test(value));
+  if (!sentence || sentence.length > 320) return "";
+  return sentence.trim();
+}
+
+async function wikipediaSpeciesInfo(scientificName, language) {
+  if (!scientificName) return null;
+  const lang = language === "en" ? "en" : "fr";
+  const url = new URL(`https://${lang}.wikipedia.org/w/api.php`);
+  url.searchParams.set("action", "query");
+  url.searchParams.set("generator", "search");
+  url.searchParams.set("gsrsearch", `"${scientificName}"`);
+  url.searchParams.set("gsrlimit", "1");
+  url.searchParams.set("prop", "extracts|pageimages|info");
+  url.searchParams.set("explaintext", "1");
+  url.searchParams.set("inprop", "url");
+  url.searchParams.set("pithumbsize", "900");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("formatversion", "2");
+  url.searchParams.set("origin", "*");
+
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": "Le-Grimoire/0.2 (botanical educational app)" },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const page = data?.query?.pages?.[0];
+    if (!page?.extract || page.missing) return null;
+    const sentences = textSentences(page.extract);
+    return {
+      summary: sentences.slice(0, 3).join(" "),
+      recognition: (sentences.slice(2, 6).join(" ") || sentences.slice(0, 3).join(" ")),
+      height: extractHeight(page.extract, lang),
+      flowering: extractFlowering(page.extract, lang),
+      safetyNote: extractSafetyNote(page.extract, lang),
+      imageUrl: /^https:\/\//.test(page.thumbnail?.source || "") ? page.thumbnail.source : "",
+      sourceLabel: `Wikipédia — ${page.title}`,
+      sourceUrl: /^https:\/\//.test(page.fullurl || "") ? page.fullurl : ""
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function enrichResults(data, language) {
+  if (!Array.isArray(data?.results)) return data;
+  await Promise.all(data.results.slice(0, 3).map(async result => {
+    const scientificName =
+      result?.species?.scientificNameWithoutAuthor ||
+      result?.species?.scientificName;
+    result.enrichment = await wikipediaSpeciesInfo(scientificName, language);
+  }));
+  return data;
+}
+
 async function readBody(request) {
   const chunks = [];
   let size = 0;
@@ -106,6 +191,7 @@ async function identifyPlant(request, response, requestUrl) {
       return sendJson(response, upstream.status, { error: message });
     }
 
+    await enrichResults(data, requestedLanguage);
     return sendJson(response, 200, data);
   } catch (error) {
     return sendJson(response, error.status || 502, {
@@ -150,6 +236,17 @@ const server = http.createServer(async (request, response) => {
   }
   if (request.method === "GET" && requestUrl.pathname === "/health") {
     return sendJson(response, 200, { status: "ok" });
+  }
+  if (request.method === "GET" && requestUrl.pathname === "/api/species-info") {
+    const name = requestUrl.searchParams.get("name") || "";
+    const language = requestUrl.searchParams.get("lang") || "fr";
+    if (!name || name.length > 160) {
+      return sendJson(response, 400, { error: "Nom scientifique invalide." });
+    }
+    const information = await wikipediaSpeciesInfo(name, language);
+    return sendJson(response, information ? 200 : 404, information || {
+      error: "Aucune information complémentaire trouvée."
+    });
   }
   if (request.method === "GET") {
     return serveFile(response, decodeURIComponent(requestUrl.pathname));

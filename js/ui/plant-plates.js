@@ -15,6 +15,14 @@ function plantStaticImageMarkup(plant){
 function plantPlateMarkup(entry){
   const name = safeText(entry.name || t("image.observation"));
   const latin = safeText(entry.shortLatin || entry.latin || "");
+  if(entry.imageUrl){
+    return `
+      <figure class="species-plate">
+        <img src="${safeText(entry.imageUrl)}" alt="${safeText(t("photo.compareAlt", {name:entry.name}))}" loading="lazy" decoding="async">
+        <figcaption><strong>${name}</strong><span>${latin}</span></figcaption>
+      </figure>
+    `;
+  }
   const haystack = `${entry.name || ""} ${entry.latin || ""} ${entry.shortLatin || ""}`.toLowerCase();
   const seedText = `${entry.name || ""}${entry.latin || ""}${entry.family || ""}`;
   const seed = Array.from(seedText).reduce((total, char) => total + char.charCodeAt(0), 0);

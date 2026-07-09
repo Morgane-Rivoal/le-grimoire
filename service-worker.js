@@ -1,4 +1,4 @@
-const CACHE_VERSION = "grimoire-v0.2.0-pwa-2";
+const CACHE_VERSION = "grimoire-v0.2.0-pwa-3";
 const APP_SHELL = [
   "/",
   "/Le_Grimoire_v0_2_0.html",
@@ -9,6 +9,7 @@ const APP_SHELL = [
   "/js/data/plants.js",
   "/js/data/knowledge-profiles.js",
   "/js/data/content-en.js",
+  "/js/storage/photos.js",
   "/js/ui/plant-plates.js",
   "/js/app.js",
   "/js/pwa.js",
