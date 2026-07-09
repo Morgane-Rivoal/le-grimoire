@@ -225,6 +225,11 @@ const translations = {
 };
 
 const supportedLocales = Object.keys(translations);
+const localeMigrationVersion = "grimoire-v0.2.0-fr-default-1";
+if(localStorage.getItem("grimoire-locale-migration") !== localeMigrationVersion){
+  localStorage.setItem("grimoire-locale", "fr");
+  localStorage.setItem("grimoire-locale-migration", localeMigrationVersion);
+}
 let currentLocale = localStorage.getItem("grimoire-locale") || "fr";
 if(!supportedLocales.includes(currentLocale)) currentLocale = "fr";
 
