@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: le-grimoire-botanique
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: PLANTNET_API_KEY
+        sync: false

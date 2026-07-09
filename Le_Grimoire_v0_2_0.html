@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0f2018" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Le Grimoire" />
+<title>Le Grimoire &mdash; v0.2.0</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" href="/assets/icons/icon-192.png" />
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+<label class="language-switcher">
+  <span data-i18n="language.label">Langue</span>
+  <select id="localeSelect" onchange="setLocale(this.value)" aria-label="Langue">
+    <option value="fr">FR</option>
+    <option value="en">EN</option>
+  </select>
+</label>
+
+<section id="cover" class="screen active">
+  <div class="cover">
+    <div class="cover-inner">
+      <div class="brand-symbol">
+        <img src="assets/icons/icon-512.png" alt="" width="144" height="144">
+      </div>
+      <p class="cover-sub" data-i18n="cover.subtitle">Encyclopédie des plantes</p>
+      <h1 class="cover-title">Le<br>Grimoire</h1>
+      <p class="devise" data-i18n="cover.motto">Observer. Comprendre. Respecter.</p>
+      <button class="primary" onclick="go('preface')" data-i18n="cover.open">Ouvrir le Grimoire</button>
+    </div>
+  </div>
+</section>
+
+<section id="preface" class="screen">
+  <div class="page">
+    <p class="kicker" data-i18n="preface.kicker">Première page</p>
+    <h2 data-i18n="preface.title">Préface</h2>
+    <p data-i18n="preface.welcome">Bienvenue, Botaniste.</p>
+    <p data-i18n="preface.p1"></p>
+    <p data-i18n="preface.p2"></p>
+    <p><strong data-i18n="preface.p3"></strong></p>
+    <p data-i18n="preface.p4"></p>
+    <div class="disclaimer" data-i18n="safety.disclaimer"></div>
+    <p class="centered-action"><button class="primary" onclick="go('sommaire')" data-i18n="preface.next"></button></p>
+  </div>
+</section>
+
+<section id="sommaire" class="screen">
+  <div class="page">
+    <p class="kicker" data-i18n="menu.kicker"></p>
+    <h2 data-i18n="menu.title"></h2>
+    <button class="menu-card" onclick="go('explorer')"><span><strong data-i18n="nav.explore"></strong><span data-i18n="menu.explore.description"></span></span><span class="menu-icon">🌿</span></button>
+    <button class="menu-card" onclick="go('identifier')"><span><strong data-i18n="nav.identify"></strong><span data-i18n="menu.identify.description"></span></span><span class="menu-icon">⌕</span></button>
+    <button class="menu-card" onclick="go('herbier')"><span><strong data-i18n="menu.herbarium.title"></strong><span data-i18n="menu.herbarium.description"></span></span><span class="menu-icon">📖</span></button>
+    <button id="installAppButton" class="secondary install-app hidden" onclick="installApp()" data-i18n="pwa.install"></button>
+    <p class="small-note" data-i18n="menu.version"></p>
+  </div>
+</section>
+
+<section id="explorer" class="screen">
+  <div class="page">
+    <div class="topbar">
+      <button class="back" onclick="go('sommaire')">‹</button>
+      <div><p class="kicker" data-i18n="explore.kicker"></p><h2 data-i18n="nav.explore"></h2></div>
+      <span></span>
+    </div>
+    <input id="search" data-i18n-placeholder="explore.search" oninput="schedulePlantRender()" />
+    <div class="chips">
+      <button class="chip active" data-filter="all" onclick="setFilter('all')" data-i18n="filter.all"></button>
+      <button class="chip" data-filter="comestible" onclick="setFilter('comestible')" data-i18n="filter.edible"></button>
+      <button class="chip" data-filter="prudence" onclick="setFilter('prudence')" data-i18n="filter.caution"></button>
+      <button class="chip" data-filter="aromatique" onclick="setFilter('aromatique')" data-i18n="filter.aromatic"></button>
+    </div>
+    <div id="plantGrid" class="grid"></div>
+  </div>
+</section>
+
+<section id="identifier" class="screen">
+  <div class="page">
+    <div class="topbar">
+      <button class="back" onclick="go('sommaire')">‹</button>
+      <div><p class="kicker" data-i18n="identify.kicker"></p><h2 data-i18n="nav.identify"></h2></div>
+      <span></span>
+    </div>
+    <div class="loupe"><div class="loupe-inner">🌿</div></div>
+    <p data-i18n="identify.intro"></p>
+    <form id="identifyForm" class="identify-form" onsubmit="observePlant(event)">
+      <label class="photo-picker">
+        <span data-i18n="identify.pick"></span>
+        <input id="plantPhotos" type="file" accept="image/jpeg,image/png,image/webp,.webp" capture="environment" multiple onchange="previewPhotos()">
+      </label>
+      <div id="photoPreviews" class="photo-previews"></div>
+      <p id="photoHelp" class="small-note" data-i18n="identify.help"></p>
+      <div id="identifyError" class="error-message hidden"></div>
+      <button id="identifyButton" class="primary" type="submit" data-i18n="identify.submit"></button>
+    </form>
+  </div>
+</section>
+
+<section id="loading" class="screen">
+  <div class="page page-centered">
+    <p class="kicker" data-i18n="loading.kicker"></p>
+    <h2 data-i18n="loading.title"></h2>
+    <div class="loading-ring"></div>
+    <p data-i18n="loading.text"></p>
+  </div>
+</section>
+
+<section id="result" class="screen">
+  <div class="page result-card">
+    <p class="kicker" data-i18n="result.kicker"></p>
+    <h2 data-i18n="result.title"></h2>
+    <p data-i18n="result.intro"></p>
+    <div id="identificationResults" class="identification-list"></div>
+    <button class="secondary" onclick="go('identifier')" data-i18n="result.retry"></button>
+    <div class="warning" data-i18n="result.warning"></div>
+  </div>
+</section>
+
+<section id="plantPage" class="screen">
+  <div id="plantMount" class="page"></div>
+</section>
+
+<section id="herbier" class="screen">
+  <div class="page">
+    <div class="topbar">
+      <button class="back" onclick="go('sommaire')">‹</button>
+      <div><p class="kicker" data-i18n="herbarium.kicker"></p><h2 data-i18n="herbarium.title"></h2></div>
+      <span></span>
+    </div>
+    <div id="collectionGrid" class="grid"></div>
+    <p id="emptyHerbier" class="small-note" data-i18n="herbarium.empty"></p>
+  </div>
+</section>
+
+</div>
+
+<nav id="bottomNav" class="bookmark-nav hidden">
+  <button onclick="go('explorer')" data-i18n="nav.explore"></button>
+  <button onclick="go('identifier')" data-i18n="nav.identify"></button>
+  <button onclick="go('herbier')" data-i18n="nav.herbarium"></button>
+</nav>
+
+
+<script src="js/i18n.js" charset="UTF-8"></script>
+<script src="js/data/illustrations.js" charset="UTF-8"></script>
+<script src="js/data/plants.js" charset="UTF-8"></script>
+<script src="js/data/knowledge-profiles.js" charset="UTF-8"></script>
+<script src="js/data/content-en.js" charset="UTF-8"></script>
+<script src="js/ui/plant-plates.js" charset="UTF-8"></script>
+<script src="js/app.js" charset="UTF-8"></script>
+<script src="js/pwa.js" charset="UTF-8"></script>
+</body>
+</html>
