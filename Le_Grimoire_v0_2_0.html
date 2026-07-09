@@ -64,7 +64,9 @@
       <div><p class="kicker" data-i18n="explore.kicker"></p><h2 data-i18n="nav.explore"></h2></div>
       <span></span>
     </div>
-    <input id="search" data-i18n-placeholder="explore.search" oninput="schedulePlantRender()" />
+    <div class="search-field">
+      <input id="search" data-i18n-placeholder="explore.search" oninput="schedulePlantRender()" />
+    </div>
     <div class="chips">
       <button class="chip active" data-filter="all" onclick="setFilter('all')" data-i18n="filter.all"></button>
       <button class="chip" data-filter="comestible" onclick="setFilter('comestible')" data-i18n="filter.edible"></button>
