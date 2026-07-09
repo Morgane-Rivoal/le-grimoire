@@ -1,5 +1,6 @@
 // Logique applicative : navigation, recherche, identification Pl@ntNet et herbier.
 let currentFilter = "all";
+let herbariumFilter = "all";
 let collection = loadCollection();
 let currentReliableIdentifications = [];
 let currentPlantView = null;
@@ -8,6 +9,8 @@ let activeObservationPhotoUrl = null;
 const enrichmentRequests = new Set();
 let currentScreenId = "cover";
 let plantRenderTimer = null;
+let collectionRenderTimer = null;
+let toastTimer = null;
 const screenScrollPositions = new Map();
 
 function loadCollection(){
@@ -21,6 +24,15 @@ function loadCollection(){
 
 function saveCollection(){
   localStorage.setItem("grimoire-v020-collection", JSON.stringify(collection));
+}
+
+function showToast(message, duration = 3200){
+  const toast = document.getElementById("grimoireToast");
+  if(!toast) return;
+  clearTimeout(toastTimer);
+  toast.textContent = message;
+  toast.classList.remove("hidden");
+  toastTimer = setTimeout(() => toast.classList.add("hidden"), duration);
 }
 
 function go(id){
@@ -50,10 +62,23 @@ function schedulePlantRender(){
   plantRenderTimer = setTimeout(renderPlants, 140);
 }
 
+function scheduleCollectionRender(){
+  clearTimeout(collectionRenderTimer);
+  collectionRenderTimer = setTimeout(renderCollection, 140);
+}
+
 function setFilter(filter){
   currentFilter = filter;
-  document.querySelectorAll(".chip").forEach(chip => chip.classList.toggle("active", chip.dataset.filter === filter));
+  document.querySelectorAll(".chip[data-filter]").forEach(chip => chip.classList.toggle("active", chip.dataset.filter === filter));
   renderPlants();
+}
+
+function setHerbariumFilter(filter){
+  herbariumFilter = filter;
+  document.querySelectorAll(".herbarium-chip").forEach(chip =>
+    chip.classList.toggle("active", chip.dataset.herbariumFilter === filter)
+  );
+  renderCollection();
 }
 
 function plantMatches(plant, query){
@@ -413,6 +438,12 @@ function renderIdentificationResults(results){
         <p class="small-note">${safeText(profile.summary)}</p>
         <p class="small-note"><strong>${t("result.remember")}</strong> ${safeText(profile.edibility)}</p>
         <button class="danger" onclick="saveIdentifiedPlant(${index})">${t("result.save")}</button>
+        <details class="correction-panel">
+          <summary>${t("result.correctBeforeSave")}</summary>
+          <input id="correctName-${index}" value="${safeText(commonName)}" placeholder="${t("field.commonName")}">
+          <input id="correctLatin-${index}" value="${safeText(scientificName)}" placeholder="${t("field.latinName")}">
+          <button class="secondary" onclick="saveIdentifiedPlant(${index}, true)">${t("result.saveCorrection")}</button>
+        </details>
         ${localPlant ? `<button class="secondary" onclick="openPlant('${localPlant.id}')">${t("result.openLocal")}</button>` : ""}
       </div>
     `;
@@ -494,11 +525,20 @@ function currentPredictedOrgan(){
     .join(", ");
 }
 
-async function saveIdentifiedPlant(index){
+async function saveIdentifiedPlant(index, useCorrection = false){
   const result = currentReliableIdentifications[index];
   if(!result) return;
 
   const entry = speciesFromResult(result);
+  if(useCorrection){
+    const correctedName = document.getElementById(`correctName-${index}`)?.value?.trim();
+    const correctedLatin = document.getElementById(`correctLatin-${index}`)?.value?.trim();
+    if(correctedName) entry.name = correctedName;
+    if(correctedLatin){
+      entry.latin = correctedLatin;
+      entry.shortLatin = correctedLatin;
+    }
+  }
   const localPlant = findLocalPlant(result.species);
   const profile = knowledgeForSpecies(entry, localPlant);
   const botanicalNote = botanicalNoteFor(entry, profile, localPlant);
@@ -546,7 +586,7 @@ async function saveIdentifiedPlant(index){
     }
   }
   renderPlants();
-  alert(t("alert.identificationSaved"));
+  showToast(t("alert.identificationSaved"));
   openIdentifiedPlant(id);
 }
 
@@ -694,7 +734,7 @@ function saveIdentifiedPersonal(id){
   entry.note = document.getElementById("noteInput").value;
   saveCollection();
   renderPlants();
-  alert(t("alert.observationSaved"));
+  showToast(t("alert.observationSaved"));
   openIdentifiedPlant(id);
 }
 
@@ -730,6 +770,7 @@ function photoBlockMarkup(content){
 
 function unifiedFicheSections(data){
   return `
+    <div class="safety-box"><span>⚠️</span><div>${safeText(t("safety.disclaimer"))}</div></div>
     ${infoBlockMarkup(t("section.summary"), data.summary)}
     ${infoBlockMarkup(t("section.recognition"), data.recognition)}
     ${photoBlockMarkup(data.photo)}
@@ -810,8 +851,10 @@ function refreshCurrentPlantView(){
 function toggleCollection(id){
   if(collection[id]){
     delete collection[id];
+    showToast(t("alert.pageRemoved"));
   } else {
     collection[id] = {place:"", date:"", note:""};
+    showToast(t("alert.pageAdded"));
   }
   saveCollection();
   openPlant(id);
@@ -824,16 +867,62 @@ function savePersonal(id){
     note: document.getElementById("noteInput").value
   };
   saveCollection();
-  alert(t("alert.personalSaved"));
+  showToast(t("alert.personalSaved"));
   openPlant(id);
+}
+
+function herbariumEntryMatches(id, entry, query){
+  if(entry?.type === "identification"){
+    const localPlant = plants.find(plant => plant.id === entry.localPlantId);
+    const profile = knowledgeForSpecies(entry, localPlant);
+    const haystack = [
+      entry.name,
+      entry.latin,
+      entry.family,
+      entry.place,
+      entry.note,
+      profile.summary,
+      profile.benefits,
+      profile.edibility
+    ].join(" ").toLowerCase();
+    const status = profile.status || entry.safetyStatus || "inconnu";
+    const medicinal = /médicin|medicin|tradition|infusion|usage/i.test(`${profile.benefits || ""} ${profile.summary || ""}`);
+    return haystack.includes(query) && (
+      herbariumFilter === "all" ||
+      (herbariumFilter === "comestible" && status === "comestible") ||
+      (herbariumFilter === "prudence" && status !== "comestible") ||
+      (herbariumFilter === "medicinal" && medicinal)
+    );
+  }
+
+  const sourcePlant = plants.find(p => p.id === id);
+  if(!sourcePlant) return false;
+  const plant = localizedPlant(sourcePlant);
+  const haystack = [
+    plant.name,
+    plant.latin,
+    plant.family,
+    plant.summary,
+    plant.tradition,
+    entry?.place,
+    entry?.note
+  ].join(" ").toLowerCase();
+  const medicinal = /médicin|medicin|tradition|infusion|usage/i.test(`${plant.tradition || ""} ${plant.summary || ""}`);
+  return haystack.includes(query) && (
+    herbariumFilter === "all" ||
+    (herbariumFilter === "comestible" && plant.status === "comestible") ||
+    (herbariumFilter === "prudence" && plant.status !== "comestible") ||
+    (herbariumFilter === "medicinal" && medicinal)
+  );
 }
 
 function renderCollection(){
   const grid = document.getElementById("collectionGrid");
   const empty = document.getElementById("emptyHerbier");
+  const query = document.getElementById("herbariumSearch")?.value?.toLowerCase().trim() || "";
   grid.innerHTML = "";
   const fragment = document.createDocumentFragment();
-  const ids = Object.keys(collection);
+  const ids = Object.keys(collection).filter(id => herbariumEntryMatches(id, collection[id], query));
   empty.style.display = ids.length ? "none" : "block";
   ids.forEach(id => {
     const personal = collection[id];

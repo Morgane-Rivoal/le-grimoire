@@ -15,6 +15,8 @@
 </head>
 <body>
 <div class="app">
+<div id="grimoireToast" class="grimoire-toast hidden" role="status" aria-live="polite"></div>
+
 <label class="language-switcher">
   <span data-i18n="language.label">Langue</span>
   <select id="localeSelect" onchange="setLocale(this.value)" aria-label="Langue">
@@ -133,6 +135,13 @@
       <button class="back" onclick="go('sommaire')">‹</button>
       <div><p class="kicker" data-i18n="herbarium.kicker"></p><h2 data-i18n="herbarium.title"></h2></div>
       <span></span>
+    </div>
+    <input id="herbariumSearch" data-i18n-placeholder="herbarium.search" oninput="scheduleCollectionRender()" />
+    <div class="chips">
+      <button class="chip herbarium-chip active" data-herbarium-filter="all" onclick="setHerbariumFilter('all')" data-i18n="filter.all"></button>
+      <button class="chip herbarium-chip" data-herbarium-filter="comestible" onclick="setHerbariumFilter('comestible')" data-i18n="filter.edible"></button>
+      <button class="chip herbarium-chip" data-herbarium-filter="prudence" onclick="setHerbariumFilter('prudence')" data-i18n="filter.caution"></button>
+      <button class="chip herbarium-chip" data-herbarium-filter="medicinal" onclick="setHerbariumFilter('medicinal')" data-i18n="filter.medicinal"></button>
     </div>
     <div id="collectionGrid" class="grid"></div>
     <p id="emptyHerbier" class="small-note" data-i18n="herbarium.empty"></p>
