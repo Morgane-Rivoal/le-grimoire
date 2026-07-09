@@ -85,6 +85,15 @@ const englishKnowledgeContent = {
   pinaceae:{edibility:"Not intended as food / do not consume without expertise",summary:"The pine family includes conifers such as spruces, pines, firs, cedars and larches. They are mainly ornamental, forestry or landscape trees, recognised by needles and cones rather than showy flowers.",benefits:"Main uses include ornament, shade, timber, hedging and landscaping depending on species.",care:"Provide ample space, good light and reasonably well-drained soil. Many conifers dislike stagnant water and severe pruning into old wood.",precautions:"Do not consume without expert identification. Confusion with other conifers can be dangerous, particularly yew, which is not a Pinaceae and is toxic.",source:"Grimoire family profile for Pinaceae and conifers."}
 };
 
+Object.assign(englishKnowledgeContent.lilium, {flowering:"June to July",height:"90 cm to 1.5 m",recognition:"An upright bulbous plant with lance-shaped leaves along the stem and large six-tepalled flowers. The trumpet- or cup-shaped flowers have six prominent pollen-bearing stamens."});
+Object.assign(englishKnowledgeContent.hydrangea, {flowering:"June to September",height:"1 to 2 m, sometimes taller depending on cultivar",recognition:"A deciduous shrub with large opposite, oval and clearly toothed leaves. Its small flowers form broad rounded or flat heads that may be blue, pink, purple or white."});
+Object.assign(englishKnowledgeContent.mentha, {flowering:"July to September",height:"30 to 80 cm",recognition:"A herbaceous plant with often-square stems and opposite toothed leaves. Crushed foliage releases a strong fresh, minty scent."});
+Object.assign(englishKnowledgeContent.lavandula, {flowering:"June to August",height:"40 to 80 cm",recognition:"A compact subshrub with narrow grey-green leaves. Small purple flowers form spikes above the foliage and release a characteristic fragrance."});
+Object.assign(englishKnowledgeContent.rosemary, {flowering:"Winter to spring",height:"50 cm to 1.5 m",recognition:"An evergreen shrub with very narrow leathery leaves, dark green above and whitish beneath. Pale blue to violet flowers grow from the leaf axils."});
+Object.assign(englishKnowledgeContent.thymus, {flowering:"May to July",height:"10 to 30 cm",recognition:"A low woody subshrub with tiny opposite leaves. Pink or mauve flowers form small whorls and the foliage has a strong warm aroma."});
+Object.assign(englishKnowledgeContent.petroselinum, {flowering:"June to August in its second year",height:"20 to 40 cm",recognition:"A rosette-forming then upright herb with deeply divided flat or curled leaves. Second-year flowers are small, yellow-green and arranged in umbels."});
+Object.assign(englishKnowledgeContent.rosa, {flowering:"May to October depending on cultivar",height:"50 cm to several metres depending on habit",recognition:"A shrub with stems often bearing prickles and compound leaves made of toothed leaflets. Wild flowers generally have five petals; cultivated forms may have many."});
+
 function localizedPlant(plant){
   if(currentLocale !== "en") return plant;
   return {...plant, ...(englishPlantContent[plant.id] || {})};

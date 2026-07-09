@@ -341,10 +341,11 @@ function botanicalNoteFor(entry, profile, localPlant){
   return t("note.generic", {name:entry.name || t("image.observation"), family});
 }
 
-function recognitionTextFor(entry, localPlant){
+function recognitionTextFor(entry, localPlant, profile){
   if(localPlant?.recognition) return localPlant.recognition;
+  if(profile?.recognition) return profile.recognition;
   if(entry?.enrichment?.recognition){
-    return `${entry.enrichment.recognition} ${t("recognition.matchNote", {score:entry.score || "—"})}`;
+    return entry.enrichment.recognition;
   }
   const haystack = `${entry.name || ""} ${entry.latin || ""} ${entry.shortLatin || ""} ${entry.family || ""}`.toLowerCase();
   if(haystack.includes("pinaceae") || haystack.includes("picea") || haystack.includes("pinus") || haystack.includes("abies") || haystack.includes("epicea") || haystack.includes("sapin") || haystack.includes("pin ")){
@@ -389,6 +390,8 @@ function renderIdentificationResults(results){
       family,
       enrichment: result.enrichment || null
     }, localPlant);
+    const resultHeight = profile.height || result.enrichment?.height || "";
+    const resultFlowering = profile.flowering || result.enrichment?.flowering || "";
     const card = document.createElement("article");
     card.className = "identification-choice";
     card.innerHTML = `
@@ -401,10 +404,10 @@ function renderIdentificationResults(results){
         <p class="latin">${safeText(scientificName)}</p>
         ${family ? `<p class="small-note">${safeText(family)}</p>` : ""}
         <p class="score">${t("result.confidence", {score})}</p>
-        ${result.enrichment?.height || result.enrichment?.flowering ? `
+        ${resultHeight || resultFlowering ? `
           <div class="result-facts">
-            ${result.enrichment.height ? `<span><strong>${t("field.height")}</strong>${safeText(result.enrichment.height)}</span>` : ""}
-            ${result.enrichment.flowering ? `<span><strong>${t("field.flowering")}</strong>${safeText(result.enrichment.flowering)}</span>` : ""}
+            ${resultHeight ? `<span><strong>${t("field.height")}</strong>${safeText(resultHeight)}</span>` : ""}
+            ${resultFlowering ? `<span><strong>${t("field.flowering")}</strong>${safeText(resultFlowering)}</span>` : ""}
           </div>
         ` : ""}
         <p class="small-note">${safeText(profile.summary)}</p>
@@ -607,8 +610,8 @@ function openIdentifiedPlant(id){
 
     ${identityMarkup([
       {label:t("field.family"), value:entry.family},
-      {label:t("field.flowering"), value:displayPlant?.flowering || entry.flowering || t("field.variable")},
-      {label:t("field.height"), value:displayPlant?.height || entry.height || t("field.variable")},
+      {label:t("field.flowering"), value:displayPlant?.flowering || computedProfile.flowering || entry.flowering || t("field.variable")},
+      {label:t("field.height"), value:displayPlant?.height || computedProfile.height || entry.height || t("field.variable")},
       {label:t("field.status"), value:profile.edibility},
       {label:t("field.source"), value:entry.source || "Pl@ntNet"},
       {label:t("field.observation"), value:entry.date || t("common.notProvided")},
@@ -617,7 +620,7 @@ function openIdentifiedPlant(id){
 
     ${unifiedFicheSections({
       summary: profile.summary,
-      recognition: recognitionTextFor(entry, localPlant),
+      recognition: recognitionTextFor(entry, localPlant, computedProfile),
       photo: `<div id="observationPhotoMount"><p>${safeText(t("photo.loading"))}</p></div>`,
       consumption: profile.consumption || profile.edibility,
       benefits: profile.benefits,
