@@ -33,8 +33,11 @@
 
 <section id="preface" class="screen">
   <div class="page">
-    <p class="kicker" data-i18n="preface.kicker">Première page</p>
-    <h2 data-i18n="preface.title">Préface</h2>
+    <div class="topbar">
+      <button class="back" onclick="goBack('cover')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="preface.kicker">Première page</p><h2 data-i18n="preface.title">Préface</h2></div>
+      <span></span>
+    </div>
     <p data-i18n="preface.welcome">Bienvenue, Botaniste.</p>
     <p data-i18n="preface.p1"></p>
     <p data-i18n="preface.p2"></p>
@@ -60,7 +63,7 @@
 <section id="explorer" class="screen">
   <div class="page">
     <div class="topbar">
-      <button class="back" onclick="go('sommaire')">‹</button>
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
       <div><p class="kicker" data-i18n="explore.kicker"></p><h2 data-i18n="nav.explore"></h2></div>
       <span></span>
     </div>
@@ -73,6 +76,9 @@
       <button class="chip" data-filter="prudence" onclick="setFilter('prudence')" data-i18n="filter.caution"></button>
       <button class="chip" data-filter="aromatique" onclick="setFilter('aromatique')" data-i18n="filter.aromatic"></button>
     </div>
+    <button id="bloomToggle" class="chip bloom-toggle" onclick="toggleBloomingNow()" aria-pressed="false">
+      <span aria-hidden="true">🌸</span> <span data-i18n="filter.bloomingNow">En fleur ce mois-ci</span>
+    </button>
     <div id="plantGrid" class="grid"></div>
   </div>
 </section>
@@ -80,7 +86,7 @@
 <section id="identifier" class="screen">
   <div class="page">
     <div class="topbar">
-      <button class="back" onclick="go('sommaire')">‹</button>
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
       <div><p class="kicker" data-i18n="identify.kicker"></p><h2 data-i18n="nav.identify"></h2></div>
       <span></span>
     </div>
@@ -107,8 +113,11 @@
 
 <section id="loading" class="screen">
   <div class="page page-centered">
-    <p class="kicker" data-i18n="loading.kicker"></p>
-    <h2 data-i18n="loading.title"></h2>
+    <div class="topbar">
+      <button class="back" onclick="goBack('identifier')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="loading.kicker"></p><h2 data-i18n="loading.title"></h2></div>
+      <span></span>
+    </div>
     <div class="loading-ring"></div>
     <p data-i18n="loading.text"></p>
   </div>
@@ -116,8 +125,11 @@
 
 <section id="result" class="screen">
   <div class="page result-card">
-    <p class="kicker" data-i18n="result.kicker"></p>
-    <h2 data-i18n="result.title"></h2>
+    <div class="topbar">
+      <button class="back" onclick="goBack('identifier')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="result.kicker"></p><h2 data-i18n="result.title"></h2></div>
+      <span></span>
+    </div>
     <p data-i18n="result.intro"></p>
     <div id="identificationResults" class="identification-list"></div>
     <button class="secondary" onclick="go('identifier')" data-i18n="result.retry"></button>
@@ -132,7 +144,7 @@
 <section id="herbier" class="screen">
   <div class="page">
     <div class="topbar">
-      <button class="back" onclick="go('sommaire')">‹</button>
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
       <div><p class="kicker" data-i18n="herbarium.kicker"></p><h2 data-i18n="herbarium.title"></h2></div>
       <span></span>
     </div>
@@ -143,6 +155,13 @@
       <button class="chip herbarium-chip" data-herbarium-filter="prudence" onclick="setHerbariumFilter('prudence')" data-i18n="filter.caution"></button>
       <button class="chip herbarium-chip" data-herbarium-filter="medicinal" onclick="setHerbariumFilter('medicinal')" data-i18n="filter.medicinal"></button>
     </div>
+    <div class="sort-row">
+      <label for="herbariumSort" data-i18n="herbarium.sortLabel">Trier par</label>
+      <select id="herbariumSort" onchange="setHerbariumSort(this.value)">
+        <option value="recent" data-i18n="herbarium.sortRecent">Plus récent</option>
+        <option value="alpha" data-i18n="herbarium.sortAlpha">Alphabétique</option>
+      </select>
+    </div>
     <div id="collectionGrid" class="grid"></div>
     <p id="emptyHerbier" class="small-note" data-i18n="herbarium.empty"></p>
   </div>
@@ -151,7 +170,7 @@
 <section id="parametres" class="screen">
   <div class="page">
     <div class="topbar">
-      <button class="back" onclick="go('sommaire')">‹</button>
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
       <div><p class="kicker" data-i18n="settings.kicker">Réglages</p><h2 data-i18n="settings.title">Paramètres</h2></div>
       <span></span>
     </div>
@@ -173,10 +192,11 @@
 </div>
 
 <nav id="bottomNav" class="bookmark-nav hidden">
-  <button onclick="go('explorer')" data-i18n="nav.explore"></button>
-  <button onclick="go('identifier')" data-i18n="nav.identify"></button>
-  <button onclick="go('herbier')" data-i18n="nav.herbarium"></button>
-  <button onclick="go('parametres')" data-i18n="nav.settings">Paramètres</button>
+  <button class="home-button" onclick="go('sommaire')" data-i18n-aria-label="nav.home" aria-label="Accueil">🏠</button>
+  <button data-nav="explorer" onclick="go('explorer')" data-i18n="nav.explore"></button>
+  <button data-nav="identifier" onclick="go('identifier')" data-i18n="nav.identify"></button>
+  <button data-nav="herbier" onclick="go('herbier')" data-i18n="nav.herbarium"></button>
+  <button data-nav="parametres" onclick="go('parametres')" data-i18n="nav.settings">Paramètres</button>
 </nav>
 
 
@@ -187,7 +207,15 @@
 <script src="js/data/content-en.js" charset="UTF-8"></script>
 <script src="js/storage/photos.js" charset="UTF-8"></script>
 <script src="js/ui/plant-plates.js" charset="UTF-8"></script>
-<script src="js/app.js" charset="UTF-8"></script>
+<script src="js/core/utils.js" charset="UTF-8"></script>
+<script src="js/core/state.js" charset="UTF-8"></script>
+<script src="js/core/navigation.js" charset="UTF-8"></script>
+<script src="js/features/knowledge.js" charset="UTF-8"></script>
+<script src="js/features/explorer.js" charset="UTF-8"></script>
+<script src="js/features/identification.js" charset="UTF-8"></script>
+<script src="js/features/plant-detail.js" charset="UTF-8"></script>
+<script src="js/features/herbarium.js" charset="UTF-8"></script>
+<script src="js/init.js" charset="UTF-8"></script>
 <script src="js/pwa.js" charset="UTF-8"></script>
 </body>
 </html>

@@ -6,12 +6,14 @@ function plantImageMarkup(entry){
 }
 
 function plantStaticImageMarkup(plant){
+  if(!plant.illu){
+    return plantPlateMarkup(plant);
+  }
   return `<img src="${safeText(plant.illu)}" alt="${safeText(t("image.illustrationOf", {name:plant.name}))}" loading="lazy" decoding="async">`;
 }
 
 function plantPlateMarkup(entry){
   const name = safeText(entry.name || t("image.observation"));
-  const latin = safeText(entry.shortLatin || entry.latin || "");
   const haystack = `${entry.name || ""} ${entry.latin || ""} ${entry.shortLatin || ""}`.toLowerCase();
   const seedText = `${entry.name || ""}${entry.latin || ""}${entry.family || ""}`;
   const seed = Array.from(seedText).reduce((total, char) => total + char.charCodeAt(0), 0);
@@ -42,7 +44,6 @@ function plantPlateMarkup(entry){
             <circle cx="-38" cy="-20" r="5"/><circle cx="34" cy="-26" r="5"/><circle cx="-20" cy="28" r="5"/><circle cx="28" cy="23" r="5"/><circle cx="0" cy="-42" r="5"/>
           </g>
         </g>
-        <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
       </svg>
     `;
   }
@@ -60,7 +61,6 @@ function plantPlateMarkup(entry){
           <path d="M0 -48 C28 -58 52 -34 44 -8 C72 -2 78 35 48 48 C36 78 -2 72 -10 46 C-42 62 -74 38 -58 6 C-80 -22 -52 -58 -18 -44Z" fill="${flowerColor}"/>
           <circle cx="0" cy="5" r="10" fill="#B8924A" stroke="none"/>
         </g>
-        <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
       </svg>
     `;
   }
@@ -79,7 +79,6 @@ function plantPlateMarkup(entry){
           <ellipse cx="235" cy="63" rx="15" ry="9"/><ellipse cx="232" cy="83" rx="14" ry="8"/>
           <ellipse cx="298" cy="88" rx="15" ry="9"/>
         </g>
-        <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
       </svg>
     `;
   }
@@ -105,7 +104,6 @@ function plantPlateMarkup(entry){
           </g>
           <circle cx="0" cy="-1" r="5" fill="#D7A24A" stroke="none"/>
         </g>
-        <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
       </svg>
     `;
   }
@@ -123,7 +121,6 @@ function plantPlateMarkup(entry){
           <path d="M0 62 C-48 42 -58 -16 -34 -58 C-12 -30 0 -18 0 6 C0 -18 14 -30 36 -58 C60 -14 48 44 0 62Z" fill="${flowerColor}"/>
           <path d="M0 58 C-18 25 -10 -10 0 -38 C12 -10 18 25 0 58Z" fill="#DFA1B3" opacity=".55"/>
         </g>
-        <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
       </svg>
     `;
   }
@@ -144,7 +141,6 @@ function plantPlateMarkup(entry){
           <path d="M-28 20 C-10 -2 10 -2 28 20 C18 54 -18 54 -28 20Z" fill="#B38AC8"/>
           <circle cx="0" cy="10" r="8" fill="#D7A24A" stroke="none"/>
         </g>
-        <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
       </svg>
     `;
   }
@@ -166,7 +162,6 @@ function plantPlateMarkup(entry){
           <ellipse cx="126" cy="174" rx="22" ry="6"/><ellipse cx="158" cy="180" rx="20" ry="6"/>
           <ellipse cx="292" cy="196" rx="22" ry="6"/><ellipse cx="260" cy="202" rx="20" ry="6"/>
         </g>
-        <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
       </svg>
     `;
   }
@@ -198,7 +193,6 @@ function plantPlateMarkup(entry){
           <path d="M170 232 C180 240 188 250 184 268"/>
           <path d="M180 232 C174 246 172 258 176 274"/>
         </g>
-        <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
       </svg>
     `;
   }
@@ -221,7 +215,6 @@ function plantPlateMarkup(entry){
           </g>
           <circle cx="0" cy="0" r="16" fill="#B8924A"/>
         </g>
-        <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
       </svg>
     `;
   }
@@ -244,7 +237,6 @@ function plantPlateMarkup(entry){
           ? `<path d="M210 66 C230 72 235 95 217 105 C198 116 180 98 190 78 C194 70 201 66 210 66Z"/><circle cx="210" cy="88" r="7" fill="#B8924A" stroke="none"/>`
           : `<circle cx="210" cy="78" r="6"/><circle cx="222" cy="86" r="6"/><circle cx="198" cy="90" r="6"/><circle cx="214" cy="100" r="6"/>`}
       </g>
-      <text x="28" y="285" fill="#6C4D17" font-family="Georgia" font-size="20">${latin}</text>
     </svg>
   `;
 }
