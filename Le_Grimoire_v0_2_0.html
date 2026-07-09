@@ -17,14 +17,6 @@
 <div class="app">
 <div id="grimoireToast" class="grimoire-toast hidden" role="status" aria-live="polite"></div>
 
-<label class="language-switcher">
-  <span data-i18n="language.label">Langue</span>
-  <select id="localeSelect" onchange="setLocale(this.value)" aria-label="Langue">
-    <option value="fr">FR</option>
-    <option value="en">EN</option>
-  </select>
-</label>
-
 <section id="cover" class="screen active">
   <div class="cover">
     <div class="cover-inner">
@@ -58,7 +50,7 @@
     <p class="kicker" data-i18n="menu.kicker"></p>
     <h2 data-i18n="menu.title"></h2>
     <button class="menu-card" onclick="go('explorer')"><span><strong data-i18n="nav.explore"></strong><span data-i18n="menu.explore.description"></span></span><span class="menu-icon">🌿</span></button>
-    <button class="menu-card" onclick="go('identifier')"><span><strong data-i18n="nav.identify"></strong><span data-i18n="menu.identify.description"></span></span><span class="menu-icon">⌕</span></button>
+    <button class="menu-card" onclick="go('identifier')"><span><strong data-i18n="nav.identify"></strong><span data-i18n="menu.identify.description"></span></span><span class="menu-icon menu-loupe" aria-hidden="true">&#128269;</span></button>
     <button class="menu-card" onclick="go('herbier')"><span><strong data-i18n="menu.herbarium.title"></strong><span data-i18n="menu.herbarium.description"></span></span><span class="menu-icon">📖</span></button>
     <button id="installAppButton" class="secondary install-app hidden" onclick="installApp()" data-i18n="pwa.install"></button>
     <p class="small-note" data-i18n="menu.version"></p>
@@ -93,10 +85,16 @@
     <div class="loupe"><div class="loupe-inner">🌿</div></div>
     <p data-i18n="identify.intro"></p>
     <form id="identifyForm" class="identify-form" onsubmit="observePlant(event)">
-      <label class="photo-picker">
-        <span data-i18n="identify.pick"></span>
-        <input id="plantPhotos" type="file" accept="image/jpeg,image/png,image/webp,.webp" capture="environment" multiple onchange="previewPhotos()">
-      </label>
+      <div class="photo-actions">
+        <label class="photo-picker">
+          <span data-i18n="identify.pickGallery"></span>
+          <input id="plantPhotos" type="file" accept="image/jpeg,image/png,image/webp,.webp" multiple onchange="previewPhotos('plantPhotos')">
+        </label>
+        <label class="photo-picker">
+          <span data-i18n="identify.pickCamera"></span>
+          <input id="plantCamera" type="file" accept="image/jpeg,image/png,image/webp,.webp" capture="environment" onchange="previewPhotos('plantCamera')">
+        </label>
+      </div>
       <div id="photoPreviews" class="photo-previews"></div>
       <p id="photoHelp" class="small-note" data-i18n="identify.help"></p>
       <div id="identifyError" class="error-message hidden"></div>
@@ -148,12 +146,35 @@
   </div>
 </section>
 
+<section id="parametres" class="screen">
+  <div class="page">
+    <div class="topbar">
+      <button class="back" onclick="go('sommaire')">‹</button>
+      <div><p class="kicker" data-i18n="settings.kicker"></p><h2 data-i18n="settings.title"></h2></div>
+      <span></span>
+    </div>
+    <div class="settings-list">
+      <label class="settings-row">
+        <span>
+          <strong data-i18n="language.label"></strong>
+          <small data-i18n="settings.languageHelp"></small>
+        </span>
+        <select id="localeSelect" onchange="setLocale(this.value)" aria-label="Langue">
+          <option value="fr">FR</option>
+          <option value="en">EN</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</section>
+
 </div>
 
 <nav id="bottomNav" class="bookmark-nav hidden">
   <button onclick="go('explorer')" data-i18n="nav.explore"></button>
   <button onclick="go('identifier')" data-i18n="nav.identify"></button>
   <button onclick="go('herbier')" data-i18n="nav.herbarium"></button>
+  <button onclick="go('parametres')" data-i18n="nav.settings"></button>
 </nav>
 
 

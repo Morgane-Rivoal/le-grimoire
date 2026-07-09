@@ -48,6 +48,7 @@ function go(id){
   if(id==="explorer") document.querySelectorAll("#bottomNav button")[0].classList.add("active");
   if(id==="identifier") document.querySelectorAll("#bottomNav button")[1].classList.add("active");
   if(id==="herbier") document.querySelectorAll("#bottomNav button")[2].classList.add("active");
+  if(id==="parametres") document.querySelectorAll("#bottomNav button")[3].classList.add("active");
   if(id==="explorer") renderPlants();
   if(id==="herbier") renderCollection();
   const restorePosition = ["explorer", "herbier"].includes(id);
@@ -152,6 +153,7 @@ function renderPlants(){
 }
 
 let previewUrls = [];
+let selectedPlantFiles = [];
 let currentPredictedOrgans = [];
 const acceptedImageTypes = ["image/jpeg", "image/png", "image/webp"];
 const minimumPlantNetScore = 0.2;
@@ -162,21 +164,24 @@ function showIdentifyError(message){
   errorBox.classList.toggle("hidden", !message);
 }
 
-function previewPhotos(){
-  const input = document.getElementById("plantPhotos");
+function previewPhotos(inputId = "plantPhotos"){
+  const input = document.getElementById(inputId);
   const preview = document.getElementById("photoPreviews");
-  const files = Array.from(input.files || []);
+  const incomingFiles = Array.from(input?.files || []);
+  const proposedFiles = selectedPlantFiles.concat(incomingFiles);
+  selectedPlantFiles = proposedFiles.slice(0, 5);
+  if(input) input.value = "";
 
   previewUrls.forEach(url => URL.revokeObjectURL(url));
   previewUrls = [];
   preview.innerHTML = "";
   showIdentifyError("");
 
-  if(files.length > 5){
+  if(proposedFiles.length > 5){
     showIdentifyError(t("error.maxPhotos"));
   }
 
-  files.slice(0,5).forEach(file => {
+  selectedPlantFiles.forEach(file => {
     const url = URL.createObjectURL(file);
     previewUrls.push(url);
     const card = document.createElement("div");
@@ -453,8 +458,7 @@ function renderIdentificationResults(results){
 
 async function observePlant(event){
   event.preventDefault();
-  const input = document.getElementById("plantPhotos");
-  const files = Array.from(input.files || []);
+  const files = selectedPlantFiles.slice(0, 5);
 
   if(!files.length){
     showIdentifyError(t("error.noPhoto"));
