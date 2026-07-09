@@ -100,8 +100,8 @@ body::after{
 }
 
 @keyframes pageIn{
-  from{opacity:0;transform:translateY(14px) scale(.992)}
-  to{opacity:1;transform:translateY(0) scale(1)}
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
 }
 
 .cover{
@@ -276,6 +276,11 @@ button,input,textarea,select{
   font-family:Georgia,"Times New Roman",serif;
 }
 
+button,
+.photo-picker{
+  touch-action:manipulation;
+}
+
 .primary,.secondary,.danger{
   border:0;
   border-radius:999px;
@@ -284,7 +289,6 @@ button,input,textarea,select{
   cursor:pointer;
   font-size:.98rem;
   min-height:44px;
-  touch-action:manipulation;
   transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
 }
 
@@ -314,7 +318,7 @@ select:focus-visible{
 }
 
 .primary:active,.secondary:active,.danger:active,.chip:active{
-  transform:scale(.98);
+  filter:brightness(.96);
 }
 
 .back{
@@ -482,7 +486,7 @@ textarea{
 
 .menu-card:active,
 .plant-card:active{
-  transform:scale(.985);
+  filter:brightness(.97);
 }
 
 @media(hover:hover){
