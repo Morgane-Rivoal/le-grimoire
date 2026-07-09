@@ -27,6 +27,12 @@ html,body{
     linear-gradient(145deg,#08100c,var(--forest) 62%,#07110d);
   color:var(--cream);
   -webkit-tap-highlight-color:rgba(184,146,74,.22);
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+
+html{
+  touch-action:manipulation;
 }
 
 body::before{
@@ -92,16 +98,10 @@ body::after{
 
 .screen{
   display:none;
-  animation:pageIn .38s ease both;
 }
 
 .screen.active{
   display:block;
-}
-
-@keyframes pageIn{
-  from{opacity:0;transform:translateY(10px)}
-  to{opacity:1;transform:translateY(0)}
 }
 
 .cover{
@@ -203,10 +203,8 @@ body::after{
 }
 
 #sommaire{
-  position:fixed;
-  inset:0;
-  z-index:5;
-  overflow:auto;
+  width:100vw;
+  margin:-18px 0 -94px calc(50% - 50vw);
 }
 
 #sommaire .page{
@@ -289,7 +287,7 @@ button,
   cursor:pointer;
   font-size:.98rem;
   min-height:44px;
-  transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
+  transition:box-shadow .18s ease, filter .18s ease;
 }
 
 button:focus-visible,
@@ -351,7 +349,7 @@ select:focus-visible{
   padding:18px;
   margin:13px 0;
   cursor:pointer;
-  transition:.22s ease;
+  transition:box-shadow .22s ease, filter .18s ease;
   width:100%;
   color:inherit;
   text-align:left;
@@ -470,7 +468,7 @@ textarea{
   border-radius:18px;
   padding:12px;
   cursor:pointer;
-  transition:.2s ease;
+  transition:filter .18s ease, box-shadow .18s ease;
 }
 
 .plant-card h3,
@@ -491,12 +489,11 @@ textarea{
 
 @media(hover:hover){
   .menu-card:hover{
-    transform:translateY(-2px);
     box-shadow:0 12px 24px rgba(32,45,35,.12);
   }
 
   .plant-card:hover{
-    transform:translateY(-2px);
+    box-shadow:0 10px 20px rgba(32,45,35,.1);
   }
 }
 
@@ -1028,6 +1025,10 @@ textarea{
 @media(max-width:520px){
   .app{
     padding:12px 10px 96px;
+  }
+
+  #sommaire{
+    margin:-12px 0 -96px calc(50% - 50vw);
   }
 
   .page{
