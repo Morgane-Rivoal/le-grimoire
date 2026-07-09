@@ -1,4 +1,4 @@
-const CACHE_VERSION = "grimoire-v0.2.0-pwa-6";
+const CACHE_VERSION = "grimoire-v0.2.0-pwa-7";
 const APP_SHELL = [
   "/",
   "/Le_Grimoire_v0_2_0.html",
@@ -40,6 +40,10 @@ self.addEventListener("activate", event => {
       ))
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener("message", event => {
+  if(event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("fetch", event => {

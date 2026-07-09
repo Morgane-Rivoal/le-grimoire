@@ -411,8 +411,13 @@ function renderIdentificationResults(results){
     const scientificName = species.scientificName || species.scientificNameWithoutAuthor || t("result.unknownSpecies");
     const family = species.family?.scientificNameWithoutAuthor || species.family?.scientificName || "";
     const score = Math.round((Number(result.score) || 0) * 100);
-    const imageUrl = resultImage(result);
     const localPlant = findLocalPlant(species);
+    const visualEntry = {
+      name: commonName,
+      latin: scientificName,
+      shortLatin: species.scientificNameWithoutAuthor || scientificName,
+      family
+    };
     const profile = knowledgeForSpecies({
       name: commonName,
       latin: scientificName,
@@ -425,9 +430,7 @@ function renderIdentificationResults(results){
     const card = document.createElement("article");
     card.className = "identification-choice";
     card.innerHTML = `
-      ${imageUrl
-        ? `<img src="${safeText(imageUrl)}" alt="${safeText(t("photo.compareAlt", {name: commonName}))}">`
-        : `<div class="identification-placeholder" aria-hidden="true"></div>`}
+      <div class="identification-plate">${plantPlateMarkup(visualEntry)}</div>
       <div>
         <span class="badge">${t("result.proposal", {number: index + 1})}</span>
         <h3>${safeText(commonName)}</h3>

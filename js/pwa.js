@@ -30,9 +30,30 @@ async function installApp(){
 
 if("serviceWorker" in navigator && location.protocol !== "file:"){
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/service-worker.js").catch(error => {
+    navigator.serviceWorker.register("/service-worker.js").then(registration => {
+      registration.update();
+      registration.addEventListener("updatefound", () => {
+        const worker = registration.installing;
+        if(!worker) return;
+        worker.addEventListener("statechange", () => {
+          if(worker.state === "installed" && navigator.serviceWorker.controller){
+            worker.postMessage({type:"SKIP_WAITING"});
+          }
+        });
+      });
+      if(registration.waiting){
+        registration.waiting.postMessage({type:"SKIP_WAITING"});
+      }
+    }).catch(error => {
       console.warn("Service worker registration failed:", error);
     });
+  });
+
+  let refreshingForUpdate = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if(refreshingForUpdate) return;
+    refreshingForUpdate = true;
+    window.location.reload();
   });
 }
 

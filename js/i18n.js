@@ -225,7 +225,7 @@ const translations = {
 };
 
 const supportedLocales = Object.keys(translations);
-let currentLocale = localStorage.getItem("grimoire-locale") || navigator.language?.slice(0, 2) || "fr";
+let currentLocale = localStorage.getItem("grimoire-locale") || "fr";
 if(!supportedLocales.includes(currentLocale)) currentLocale = "fr";
 
 function t(key, variables = {}){
