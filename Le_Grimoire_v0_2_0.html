@@ -182,10 +182,11 @@
 </div>
 
 <nav id="bottomNav" class="bookmark-nav hidden">
-  <button onclick="go('explorer')" data-i18n="nav.explore"></button>
-  <button onclick="go('identifier')" data-i18n="nav.identify"></button>
-  <button onclick="go('herbier')" data-i18n="nav.herbarium"></button>
-  <button onclick="go('parametres')" data-i18n="nav.settings">Paramètres</button>
+  <button class="home-button" onclick="go('sommaire')" data-i18n-aria-label="nav.home" aria-label="Accueil">🏠</button>
+  <button data-nav="explorer" onclick="go('explorer')" data-i18n="nav.explore"></button>
+  <button data-nav="identifier" onclick="go('identifier')" data-i18n="nav.identify"></button>
+  <button data-nav="herbier" onclick="go('herbier')" data-i18n="nav.herbarium"></button>
+  <button data-nav="parametres" onclick="go('parametres')" data-i18n="nav.settings">Paramètres</button>
 </nav>
 
 

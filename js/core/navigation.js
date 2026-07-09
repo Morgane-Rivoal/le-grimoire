@@ -17,10 +17,7 @@ function go(id, options = {}){
   const nav = document.getElementById("bottomNav");
   nav.classList.toggle("hidden", ["cover","preface","sommaire","loading"].includes(id));
   document.querySelectorAll("#bottomNav button").forEach(b => b.classList.remove("active"));
-  if(id==="explorer") document.querySelectorAll("#bottomNav button")[0].classList.add("active");
-  if(id==="identifier") document.querySelectorAll("#bottomNav button")[1].classList.add("active");
-  if(id==="herbier") document.querySelectorAll("#bottomNav button")[2].classList.add("active");
-  if(id==="parametres") document.querySelectorAll("#bottomNav button")[3].classList.add("active");
+  document.querySelector(`#bottomNav [data-nav="${id}"]`)?.classList.add("active");
   if(id==="explorer") renderPlants();
   if(id==="herbier") renderCollection();
   const restorePosition = ["explorer", "herbier"].includes(id);

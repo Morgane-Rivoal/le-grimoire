@@ -1086,7 +1086,7 @@ textarea{
   bottom:max(10px,env(safe-area-inset-bottom));
   width:min(500px,calc(100% - 20px));
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:52px repeat(4,1fr);
   gap:8px;
   background:rgba(239,226,191,.94);
   border:1px solid rgba(184,146,74,.58);
@@ -1102,10 +1102,16 @@ textarea{
   color:var(--ink);
   font-weight:900;
   cursor:pointer;
-  padding:11px 8px;
+  padding:11px 4px;
   border-radius:14px;
   min-height:44px;
+  font-size:.92rem;
   transition:background-color .22s ease, color .22s ease, filter .16s ease, box-shadow .22s ease;
+}
+
+.bookmark-nav .home-button{
+  padding:11px 0;
+  font-size:1.3rem;
 }
 
 .bookmark-nav button.active{
