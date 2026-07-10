@@ -115,7 +115,6 @@ function renderCollection(){
         <p class="latin">${safeText(personal.latin)}</p>
         <div class="badges">
           <span class="badge">${t("status.observation")}</span>
-          <span class="badge">${safeText(personal.score)} %</span>
           <span class="badge ${profile.status === "comestible" ? "" : "red"}">${safeText(profile.edibility || t("status.unknown"))}</span>
         </div>
         <p class="small-note">${safeText(personal.place || t("plant.placeMissing"))}</p>

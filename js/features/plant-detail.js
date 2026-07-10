@@ -69,24 +69,66 @@ function locationFieldsMarkup(entry){
   `;
 }
 
+async function resolvePlaceName(lat, lon){
+  try{
+    const response = await fetch(`/api/reverse-geocode?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&lang=${encodeURIComponent(currentLocale)}`);
+    if(!response.ok) return "";
+    const data = await response.json();
+    return data.label || "";
+  } catch{
+    return "";
+  }
+}
+
+async function geocodePlace(query){
+  const value = String(query || "").trim();
+  if(!value) return null;
+  try{
+    const response = await fetch(`/api/geocode?q=${encodeURIComponent(value)}&lang=${encodeURIComponent(currentLocale)}`);
+    if(!response.ok) return null;
+    return await response.json();
+  } catch{
+    return null;
+  }
+}
+
+// Complète les coordonnées à partir d'un lieu saisi à la main (sans géoloc),
+// afin que l'observation apparaisse quand même sur la carte des découvertes.
+async function coordinatesForEntry(place, lat, lon){
+  const hasCoords = lat !== undefined && lon !== undefined && !Number.isNaN(lat) && !Number.isNaN(lon);
+  if(hasCoords || !String(place || "").trim()) return {lat, lon};
+  const located = await geocodePlace(place);
+  if(located && Number.isFinite(located.lat) && Number.isFinite(located.lon)){
+    return {lat: located.lat, lon: located.lon};
+  }
+  return {lat, lon};
+}
+
 function captureLocation(){
   if(!("geolocation" in navigator)){
     showToast(t("plant.locationUnavailable"));
     return;
   }
   navigator.geolocation.getCurrentPosition(
-    position => {
+    async position => {
       const lat = position.coords.latitude;
       const lon = position.coords.longitude;
       document.getElementById("latInput").value = lat;
       document.getElementById("lonInput").value = lon;
-      const placeInput = document.getElementById("placeInput");
-      if(placeInput && !placeInput.value.trim()){
-        placeInput.value = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-      }
       const mapMount = document.getElementById("locationMap");
       if(mapMount) mapMount.innerHTML = locationMapMarkup(lat, lon);
       showToast(t("plant.locationCaptured"));
+
+      const placeInput = document.getElementById("placeInput");
+      if(placeInput && !placeInput.value.trim()){
+        const fallback = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        placeInput.value = fallback;
+        placeInput.placeholder = t("plant.locationResolving");
+        const label = await resolvePlaceName(lat, lon);
+        // On n'écrase pas ce que l'utilisateur a pu saisir entre-temps.
+        if(label && placeInput.value === fallback) placeInput.value = label;
+        placeInput.placeholder = t("plant.place");
+      }
     },
     () => showToast(t("plant.locationDenied")),
     {enableHighAccuracy:false, timeout:8000}
@@ -114,20 +156,68 @@ function photoBlockMarkup(content){
   return `<div class="info-block"><strong>${t("photo.section")}</strong>${content}</div>`;
 }
 
+function switchFicheTab(button, index){
+  const wrap = button.closest(".fiche");
+  if(!wrap) return;
+  wrap.querySelectorAll(".fiche-tab").forEach((tab, i) => {
+    const selected = i === index;
+    tab.classList.toggle("active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+  });
+  wrap.querySelectorAll(".fiche-panel").forEach((panel, i) =>
+    panel.classList.toggle("active", i === index)
+  );
+}
+
+function ficheTabs(tabs){
+  const nav = tabs.map((tab, index) =>
+    `<button type="button" class="fiche-tab ${index === 0 ? "active" : ""}" role="tab" aria-selected="${index === 0}" onclick="switchFicheTab(this, ${index})">${safeText(tab.label)}</button>`
+  ).join("");
+  const panels = tabs.map((tab, index) =>
+    `<div class="fiche-panel ${index === 0 ? "active" : ""}" role="tabpanel" data-panel="${index}">${tab.content}</div>`
+  ).join("");
+  return `<div class="fiche"><div class="fiche-tabs" role="tablist">${nav}</div><div class="fiche-panels">${panels}</div></div>`;
+}
+
 function unifiedFicheSections(data){
-  return `
-    <div class="safety-box"><span>⚠️</span><div>${safeText(t("safety.disclaimer"))}</div></div>
-    ${infoBlockMarkup(t("section.summary"), data.summary)}
-    ${infoBlockMarkup(t("section.recognition"), data.recognition)}
-    ${photoBlockMarkup(data.photo)}
-    ${infoBlockMarkup(t("section.consumption"), data.consumption)}
-    ${infoBlockMarkup(t("section.benefits"), data.benefits)}
-    ${infoBlockMarkup(t("section.care"), data.care)}
-    <div class="warning">⚠️ ${safeText(valueOrTodo(data.precautions))}</div>
-    ${infoBlockMarkup(t("section.anecdote"), data.anecdote)}
-    ${data.linkedFiche || ""}
-    ${infoBlockMarkup(t("section.source"), data.source)}
-  `;
+  return ficheTabs([
+    {
+      label: t("tab.overview"),
+      content: `
+        <div class="safety-box"><span>⚠️</span><div>${safeText(t("safety.disclaimer"))}</div></div>
+        ${infoBlockMarkup(t("section.summary"), data.summary)}
+      `
+    },
+    {
+      label: t("tab.recognition"),
+      content: `
+        ${infoBlockMarkup(t("section.recognition"), data.recognition)}
+        ${photoBlockMarkup(data.photo)}
+      `
+    },
+    {
+      label: t("tab.uses"),
+      content: `
+        ${infoBlockMarkup(t("section.consumption"), data.consumption)}
+        ${infoBlockMarkup(t("section.benefits"), data.benefits)}
+        <div class="warning">⚠️ ${safeText(valueOrTodo(data.precautions))}</div>
+      `
+    },
+    {
+      label: t("tab.culture"),
+      content: `
+        ${infoBlockMarkup(t("section.care"), data.care)}
+        ${infoBlockMarkup(t("section.anecdote"), data.anecdote)}
+      `
+    },
+    {
+      label: t("tab.source"),
+      content: `
+        ${data.linkedFiche || ""}
+        ${infoBlockMarkup(t("section.source"), data.source)}
+      `
+    }
+  ]);
 }
 
 function openIdentifiedPlant(id){
@@ -186,7 +276,6 @@ function openIdentifiedPlant(id){
 
     <div class="badges">
       <span class="badge">Pl@ntNet</span>
-      <span class="badge">${t("plant.confidence", {score:safeText(entry.score)})}</span>
       <span class="badge ${profile.status === "toxique" || profile.status === "prudence" || profile.status === "inconnu" ? "red" : ""}">${safeText(profile.edibility)}</span>
       <span class="badge">${safeText(entry.family)}</span>
     </div>
@@ -269,14 +358,16 @@ async function hydrateObservationPhoto(id, entry){
     : `<p>${safeText(t("photo.none"))}</p>`;
 }
 
-function saveIdentifiedPersonal(id){
+async function saveIdentifiedPersonal(id){
   const entry = collection[id];
   if(!entry || entry.type !== "identification") return;
-  entry.place = document.getElementById("placeInput").value;
+  const place = document.getElementById("placeInput").value;
+  const {lat, lon} = await coordinatesForEntry(place, readCoordInput("latInput"), readCoordInput("lonInput"));
+  entry.place = place;
   entry.date = document.getElementById("dateInput").value;
   entry.note = document.getElementById("noteInput").value;
-  entry.lat = readCoordInput("latInput");
-  entry.lon = readCoordInput("lonInput");
+  entry.lat = lat;
+  entry.lon = lon;
   if(!saveCollection()){
     showToast(t("alert.saveFailed"), 5000);
     return;
@@ -385,14 +476,16 @@ function toggleCollection(id){
   openPlant(id);
 }
 
-function savePersonal(id){
+async function savePersonal(id){
   const previous = collection[id] ? { ...collection[id] } : null;
+  const place = document.getElementById("placeInput").value;
+  const {lat, lon} = await coordinatesForEntry(place, readCoordInput("latInput"), readCoordInput("lonInput"));
   collection[id] = {
-    place: document.getElementById("placeInput").value,
+    place,
     date: document.getElementById("dateInput").value,
     note: document.getElementById("noteInput").value,
-    lat: readCoordInput("latInput"),
-    lon: readCoordInput("lonInput"),
+    lat,
+    lon,
     createdAt: previous?.createdAt || new Date().toISOString()
   };
   if(!saveCollection()){

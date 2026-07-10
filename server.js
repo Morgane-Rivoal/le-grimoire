@@ -129,6 +129,84 @@ async function enrichResults(data, language) {
   return data;
 }
 
+async function reverseGeocode(lat, lon, language) {
+  const latitude = Number(lat);
+  const longitude = Number(lon);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+
+  const url = new URL("https://nominatim.openstreetmap.org/reverse");
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("lat", String(latitude));
+  url.searchParams.set("lon", String(longitude));
+  url.searchParams.set("zoom", "16");
+  url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("accept-language", language === "en" ? "en" : "fr");
+
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": "Le-Grimoire/0.2 (botanical educational app)" },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const address = data?.address || {};
+    const road = address.road || address.pedestrian || address.footway || address.path || address.cycleway || "";
+    const locality = address.suburb || address.city_district || address.quarter || address.neighbourhood || "";
+    const city = address.city || address.town || address.village || address.municipality || address.hamlet || address.county || "";
+    const region = address.state || address.region || "";
+    const parts = [];
+    if (road) parts.push(road);
+    if (locality && locality !== city) parts.push(locality);
+    if (city) parts.push(city);
+    if (!parts.length && region) parts.push(region);
+    const label = parts.join(", ") ||
+      String(data?.display_name || "").split(",").slice(0, 2).map(part => part.trim()).filter(Boolean).join(", ");
+    if (!label) return null;
+    return { label, road, locality, city, region, country: address.country || "" };
+  } catch {
+    return null;
+  }
+}
+
+async function forwardGeocode(query, language) {
+  const q = String(query || "").trim();
+  if (!q || q.length > 160) return null;
+
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("q", q);
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("accept-language", language === "en" ? "en" : "fr");
+
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": "Le-Grimoire/0.3 (botanical educational app)" },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const first = Array.isArray(data) ? data[0] : null;
+    if (!first) return null;
+    const lat = Number(first.lat);
+    const lon = Number(first.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const address = first.address || {};
+    const road = address.road || address.pedestrian || address.footway || "";
+    const city = address.city || address.town || address.village || address.municipality || address.hamlet || address.county || "";
+    const parts = [];
+    if (road) parts.push(road);
+    if (city) parts.push(city);
+    const label = parts.join(", ") ||
+      String(first.display_name || "").split(",").slice(0, 2).map(part => part.trim()).filter(Boolean).join(", ") ||
+      q;
+    return { label, lat, lon };
+  } catch {
+    return null;
+  }
+}
+
 async function readBody(request) {
   const chunks = [];
   let size = 0;
@@ -201,7 +279,7 @@ async function identifyPlant(request, response, requestUrl) {
 }
 
 function serveFile(response, pathname) {
-  const requestedPath = pathname === "/" ? "Le_Grimoire_v0_2_0.html" : pathname.slice(1);
+  const requestedPath = pathname === "/" ? "le_grimoire.html" : pathname.slice(1);
   const normalized = path.normalize(requestedPath);
   const filename = path.resolve(ROOT, normalized);
 
@@ -246,6 +324,23 @@ const server = http.createServer(async (request, response) => {
     const information = await wikipediaSpeciesInfo(name, language);
     return sendJson(response, information ? 200 : 404, information || {
       error: "Aucune information complémentaire trouvée."
+    });
+  }
+  if (request.method === "GET" && requestUrl.pathname === "/api/reverse-geocode") {
+    const lat = requestUrl.searchParams.get("lat");
+    const lon = requestUrl.searchParams.get("lon");
+    const language = requestUrl.searchParams.get("lang") || "fr";
+    const place = await reverseGeocode(lat, lon, language);
+    return sendJson(response, place ? 200 : 404, place || {
+      error: "Lieu introuvable pour ces coordonnées."
+    });
+  }
+  if (request.method === "GET" && requestUrl.pathname === "/api/geocode") {
+    const query = requestUrl.searchParams.get("q") || "";
+    const language = requestUrl.searchParams.get("lang") || "fr";
+    const place = await forwardGeocode(query, language);
+    return sendJson(response, place ? 200 : 404, place || {
+      error: "Lieu introuvable."
     });
   }
   if (request.method === "GET") {

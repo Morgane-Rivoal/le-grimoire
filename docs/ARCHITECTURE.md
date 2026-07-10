@@ -2,7 +2,7 @@
 
 ## Ce qui a été séparé
 
-- `Le_Grimoire_v0_2_0.html` : structure des écrans uniquement.
+- `le_grimoire.html` : structure des écrans uniquement.
 - `css/styles.css` : toute la direction visuelle.
 - `js/data/illustrations.js` : chemins des illustrations statiques.
 - `js/data/plants.js` : base locale des plantes du Grimoire.

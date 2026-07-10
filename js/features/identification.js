@@ -13,6 +13,21 @@ function showIdentifyError(message){
   errorBox.classList.toggle("hidden", !message);
 }
 
+// Vide la sélection de photos du formulaire d'identification. Indispensable
+// après une identification réussie, sinon un retour au formulaire relance
+// l'identification sur les mêmes clichés.
+function resetPhotoSelection(){
+  previewUrls.forEach(url => URL.revokeObjectURL(url));
+  previewUrls = [];
+  selectedPlantFiles = [];
+  const preview = document.getElementById("photoPreviews");
+  if(preview) preview.innerHTML = "";
+  const gallery = document.getElementById("plantPhotos");
+  if(gallery) gallery.value = "";
+  const camera = document.getElementById("plantCamera");
+  if(camera) camera.value = "";
+}
+
 function previewPhotos(inputId = "plantPhotos"){
   const input = document.getElementById(inputId);
   const preview = document.getElementById("photoPreviews");
@@ -193,6 +208,13 @@ async function observePlant(event){
     return;
   }
 
+  // Hors ligne : on met l'observation en file d'attente au lieu d'échouer.
+  if(!navigator.onLine && typeof queueObservation === "function"){
+    await queueObservation();
+    showToast(t("queue.queuedOffline"));
+    return;
+  }
+
   const formData = new FormData();
   showIdentifyError("");
   go("loading");
@@ -213,6 +235,9 @@ async function observePlant(event){
     }
     currentPredictedOrgans = Array.isArray(data.predictedOrgans) ? data.predictedOrgans : [];
     renderIdentificationResults(data.results);
+    // Photos vidées du formulaire : le blob d'observation reste conservé pour
+    // l'enregistrement, mais un retour arrière ne relancera pas l'identification.
+    resetPhotoSelection();
     go("result");
   } catch(error){
     go("identifier");

@@ -7,3 +7,4 @@ window.addEventListener("beforeunload", () => {
 translateDocument();
 renderPlants();
 renderCollection();
+if(typeof refreshQueuePanel === "function") refreshQueuePanel();
