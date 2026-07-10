@@ -1,6 +1,6 @@
 {
   "name": "le-grimoire",
-  "version": "0.2.0",
+  "version": "0.3.0-alpha",
   "private": true,
   "description": "Encyclopédie et herbier botanique avec identification Pl@ntNet",
   "scripts": {

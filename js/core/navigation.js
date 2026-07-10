@@ -20,6 +20,9 @@ function go(id, options = {}){
   document.querySelector(`#bottomNav [data-nav="${id}"]`)?.classList.add("active");
   if(id==="explorer") renderPlants();
   if(id==="herbier") renderCollection();
+  if(id==="carte" && typeof renderDiscoveryMap === "function") renderDiscoveryMap();
+  if(id==="tableau" && typeof renderDashboard === "function") renderDashboard();
+  if(id==="identifier" && typeof refreshQueuePanel === "function") refreshQueuePanel();
   const restorePosition = ["explorer", "herbier"].includes(id);
   requestAnimationFrame(() => window.scrollTo({
     top: restorePosition ? screenScrollPositions.get(id) || 0 : 0,

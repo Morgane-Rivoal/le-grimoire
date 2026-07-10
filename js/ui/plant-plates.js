@@ -12,16 +12,46 @@ function plantStaticImageMarkup(plant){
   return `<img src="${safeText(plant.illu)}" alt="${safeText(t("image.illustrationOf", {name:plant.name}))}" loading="lazy" decoding="async">`;
 }
 
+// Hachage FNV-1a : diffuse bien les petites variations de texte, contrairement
+// à une simple somme de codes de caractères qui produit des graines proches
+// pour des noms voisins (et donc des planches trop semblables).
+function hashString(text){
+  let hash = 0x811c9dc5;
+  const value = String(text || "grimoire");
+  for(let index = 0; index < value.length; index++){
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+// Les planches sont déterministes : on mémorise le markup par clé d'espèce pour
+// éviter de régénérer le même SVG à chaque rendu de grille ou de carte.
+const plateCache = new Map();
+const PLATE_CACHE_MAX = 400;
+
 function plantPlateMarkup(entry){
+  const key = `${entry.name || ""}|${entry.latin || ""}|${entry.shortLatin || ""}|${entry.family || ""}`.toLowerCase();
+  let markup = plateCache.get(key);
+  if(markup === undefined){
+    markup = buildPlantPlate(entry);
+    plateCache.set(key, markup);
+    if(plateCache.size > PLATE_CACHE_MAX){
+      plateCache.delete(plateCache.keys().next().value);
+    }
+  }
+  return markup;
+}
+
+function buildPlantPlate(entry){
   const name = safeText(entry.name || t("image.observation"));
   const haystack = `${entry.name || ""} ${entry.latin || ""} ${entry.shortLatin || ""}`.toLowerCase();
-  const seedText = `${entry.name || ""}${entry.latin || ""}${entry.family || ""}`;
-  const seed = Array.from(seedText).reduce((total, char) => total + char.charCodeAt(0), 0);
+  const seedText = `${entry.name || ""}|${entry.latin || ""}|${entry.shortLatin || ""}|${entry.family || ""}`.toLowerCase();
+  const hash = hashString(seedText);
   const flowerColors = ["#B38AC8", "#C77482", "#AEBBFF", "#D7A24A", "#E7D37A", "#DFA1B3"];
   const leafColors = ["#7C9473", "#78926A", "#6F965E", "#8CA681"];
-  const flowerColor = flowerColors[seed % flowerColors.length];
-  const leafColor = leafColors[seed % leafColors.length];
-  const variant = seed % 4;
+  const flowerColor = flowerColors[(hash >>> 3) % flowerColors.length];
+  const leafColor = leafColors[(hash >>> 7) % leafColors.length];
 
   if(haystack.includes("hydrangea") || haystack.includes("hortensia")){
     return `
@@ -219,23 +249,94 @@ function plantPlateMarkup(entry){
     `;
   }
 
+  return generativePlate(entry, name, hash);
+}
+
+// Génère une planche florale paramétrique. Chaque caractéristique (couleur de
+// fleur, teinte du cœur, feuillage, nombre et forme des pétales, taille,
+// fond) est tirée d'un flux de bits distinct du haché, afin que deux espèces
+// proches donnent des planches nettement différentes.
+function petalRing(count, style, fill, tip, size, twoTone){
+  const fmt = value => Number(value.toFixed(1));
+  const parts = [];
+  for(let index = 0; index < count; index++){
+    const angle = (360 / count) * index;
+    const rot = `rotate(${fmt(angle)})`;
+    if(style === 0){
+      parts.push(`<ellipse cx="0" cy="${fmt(-size * 0.62)}" rx="${fmt(size * 0.30)}" ry="${fmt(size * 0.55)}" fill="${fill}" transform="${rot}"/>`);
+    } else if(style === 1){
+      const w = size * 0.30, mid = size * 0.45, tipY = size * 1.05, hw = w * 0.5;
+      parts.push(`<path d="M0 0 C ${fmt(w)} ${fmt(-mid)}, ${fmt(hw)} ${fmt(-tipY)}, 0 ${fmt(-tipY)} C ${fmt(-hw)} ${fmt(-tipY)}, ${fmt(-w)} ${fmt(-mid)}, 0 0Z" fill="${fill}" transform="${rot}"/>`);
+    } else if(style === 2){
+      parts.push(`<ellipse cx="0" cy="${fmt(-size * 0.66)}" rx="${fmt(size * 0.12)}" ry="${fmt(size * 0.62)}" fill="${fill}" transform="${rot}"/>`);
+    } else {
+      const radius = size * 0.64;
+      const px = Math.cos((angle - 90) * Math.PI / 180) * radius;
+      const py = Math.sin((angle - 90) * Math.PI / 180) * radius;
+      parts.push(`<circle cx="${fmt(px)}" cy="${fmt(py)}" r="${fmt(size * 0.30)}" fill="${fill}"/>`);
+    }
+  }
+  if(twoTone && style !== 3){
+    for(let index = 0; index < count; index++){
+      const angle = (360 / count) * index;
+      parts.push(`<ellipse cx="0" cy="${fmt(-size * 0.5)}" rx="${fmt(size * 0.13)}" ry="${fmt(size * 0.3)}" fill="${tip}" opacity="0.5" transform="rotate(${fmt(angle)})"/>`);
+    }
+  }
+  return parts.join("");
+}
+
+function generativePlate(entry, label, hash){
+  const stream = shift => (hash >>> shift) & 0x3f;
+  const flowerPalette = ["#C77482","#B38AC8","#8FA0E8","#E2A64A","#E7D06A","#DF8FB0","#D96B6B","#7FB08A","#C98AD8","#F0A65C","#9C86D6","#E8B7C6","#6FA3C4","#D4577E","#E0844B","#A9C36B"];
+  const centerPalette = ["#B8924A","#D7A24A","#7A2E2E","#6C4D17","#C98A2E","#8A5A20","#5B3527"];
+  const leafPalette = ["#7C9473","#6F965E","#78926A","#8CA681","#6C8E5A","#849A6E","#5F8452"];
+  const bgPalette = ["#F7EED3","#F5EAD0","#F3EBD8","#F8EFD6","#F4ECCF","#F6EDD9"];
+
+  const bg = bgPalette[stream(0) % bgPalette.length];
+  const flowerColor = flowerPalette[stream(2) % flowerPalette.length];
+  const petalTip = flowerPalette[(stream(4) + 6) % flowerPalette.length];
+  const centerColor = centerPalette[stream(6) % centerPalette.length];
+  const leafColor = leafPalette[stream(8) % leafPalette.length];
+  const petalCount = 5 + (stream(10) % 5);        // 5..9 pétales
+  const flowerStyle = stream(12) % 4;             // arrondi / pointu / marguerite / grappe
+  const leafStyle = stream(14) % 3;
+  const size = 42 + (stream(16) % 20);            // 42..61
+  const lean = (stream(18) % 5) - 2;              // inclinaison de la tige
+  const twoTone = stream(20) & 1;
+
+  const cx = 210;
+  const cy = 104;
+  const stemTopX = cx + lean * 5;
+  const stemTopY = cy + size * 0.4;
+  const stem = `M210 282 C ${210 + lean * 9} 232, ${stemTopX - lean * 4} 176, ${stemTopX.toFixed(0)} ${stemTopY.toFixed(0)}`;
+
+  const leafSets = [
+    [
+      "M208 214 C162 190 128 197 106 230 C146 246 182 240 208 214Z",
+      "M214 180 C260 156 296 164 320 196 C282 212 246 206 214 180Z"
+    ],
+    [
+      "M206 224 C158 200 124 208 104 240 C144 254 180 249 206 224Z",
+      "M214 196 C258 174 292 182 316 212 C280 227 246 222 214 196Z",
+      "M208 160 C170 140 140 146 116 172 C150 186 180 182 208 160Z"
+    ],
+    [
+      "M208 200 C168 172 132 178 108 208 C146 226 182 222 208 200Z",
+      "M214 168 C254 146 288 152 312 180 C278 198 246 192 214 168Z"
+    ]
+  ];
+  const leaves = leafSets[leafStyle].map(path => `<path d="${path}"/>`).join("");
+
+  const centerRadius = flowerStyle === 3 ? size * 0.22 : size * 0.24;
+
   return `
-    <svg viewBox="0 0 420 315" role="img" aria-label="${name}">
-      <rect width="420" height="315" fill="#F7EED3"/>
-      <path d="M210 282 C${variant === 0 ? "210 226 204 173 212 92" : variant === 1 ? "198 225 216 170 205 92" : variant === 2 ? "224 226 190 172 214 92" : "210 230 210 165 210 88"}" stroke="#38523B" stroke-width="5" fill="none"/>
-      <g fill="${leafColor}" stroke="#38523B" stroke-width="2.5">
-        <path d="${variant === 2 ? "M208 152 C164 128 130 136 105 166 C142 182 178 178 208 152Z" : "M208 142 C160 112 122 118 98 152 C138 171 178 170 208 142Z"}"/>
-        <path d="${variant === 1 ? "M214 178 C256 154 292 162 318 192 C282 207 246 204 214 178Z" : "M214 166 C264 132 302 140 328 176 C286 195 246 193 214 166Z"}"/>
-        <path d="${variant === 3 ? "M206 224 C166 202 132 208 112 238 C148 252 180 248 206 224Z" : "M206 216 C158 188 122 195 96 230 C138 248 178 244 206 216Z"}"/>
-      </g>
-      <g fill="${flowerColor}" stroke="#6C4D17" stroke-width="1.5">
-        ${variant === 0
-          ? `<circle cx="213" cy="82" r="7"/><circle cx="228" cy="90" r="5"/><circle cx="198" cy="95" r="5"/>`
-          : variant === 1
-          ? `<ellipse cx="210" cy="82" rx="18" ry="11"/><ellipse cx="224" cy="98" rx="13" ry="8"/><ellipse cx="194" cy="101" rx="13" ry="8"/>`
-          : variant === 2
-          ? `<path d="M210 66 C230 72 235 95 217 105 C198 116 180 98 190 78 C194 70 201 66 210 66Z"/><circle cx="210" cy="88" r="7" fill="#B8924A" stroke="none"/>`
-          : `<circle cx="210" cy="78" r="6"/><circle cx="222" cy="86" r="6"/><circle cx="198" cy="90" r="6"/><circle cx="214" cy="100" r="6"/>`}
+    <svg viewBox="0 0 420 315" role="img" aria-label="${label}">
+      <rect width="420" height="315" fill="${bg}"/>
+      <path d="${stem}" stroke="#38523B" stroke-width="5" fill="none"/>
+      <g fill="${leafColor}" stroke="#38523B" stroke-width="2.4">${leaves}</g>
+      <g transform="translate(${cx} ${cy})" stroke="#6C4D17" stroke-width="1.4">
+        ${petalRing(petalCount, flowerStyle, flowerColor, petalTip, size, twoTone)}
+        <circle cx="0" cy="0" r="${centerRadius.toFixed(1)}" fill="${centerColor}" stroke="none"/>
       </g>
     </svg>
   `;

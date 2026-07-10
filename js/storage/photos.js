@@ -1,5 +1,6 @@
 const PHOTO_DATABASE = "grimoire-observation-photos";
 const PHOTO_STORE = "photos";
+const QUEUE_STORE = "queue";
 
 function openPhotoDatabase(){
   return new Promise((resolve, reject) => {
@@ -7,11 +8,14 @@ function openPhotoDatabase(){
       reject(new Error("IndexedDB unavailable"));
       return;
     }
-    const request = indexedDB.open(PHOTO_DATABASE, 1);
+    const request = indexedDB.open(PHOTO_DATABASE, 2);
     request.onupgradeneeded = () => {
       const database = request.result;
       if(!database.objectStoreNames.contains(PHOTO_STORE)){
         database.createObjectStore(PHOTO_STORE);
+      }
+      if(!database.objectStoreNames.contains(QUEUE_STORE)){
+        database.createObjectStore(QUEUE_STORE, {autoIncrement:true});
       }
     };
     request.onsuccess = () => resolve(request.result);

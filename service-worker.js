@@ -1,15 +1,21 @@
-const CACHE_VERSION = "grimoire-v0.2.0-pwa-12";
+const CACHE_VERSION = "grimoire-v0.3.0-pwa-15";
 const APP_SHELL = [
   "/",
-  "/Le_Grimoire_v0_2_0.html",
+  "/le_grimoire.html",
   "/manifest.webmanifest",
   "/css/styles.css",
+  "/assets/vendor/leaflet/leaflet.css",
+  "/assets/vendor/leaflet/leaflet.js",
+  "/assets/vendor/leaflet/MarkerCluster.css",
+  "/assets/vendor/leaflet/MarkerCluster.Default.css",
+  "/assets/vendor/leaflet/leaflet.markercluster.js",
   "/js/i18n.js",
   "/js/data/illustrations.js",
   "/js/data/plants.js",
   "/js/data/knowledge-profiles.js",
   "/js/data/content-en.js",
   "/js/storage/photos.js",
+  "/js/storage/queue.js",
   "/js/ui/plant-plates.js",
   "/js/core/utils.js",
   "/js/core/state.js",
@@ -19,6 +25,11 @@ const APP_SHELL = [
   "/js/features/identification.js",
   "/js/features/plant-detail.js",
   "/js/features/herbarium.js",
+  "/js/features/map.js",
+  "/js/features/achievements.js",
+  "/js/features/dashboard.js",
+  "/js/features/onboarding.js",
+  "/js/features/offline-queue.js",
   "/js/init.js",
   "/js/pwa.js",
   "/assets/icons/icon-192.png",
@@ -71,7 +82,7 @@ self.addEventListener("fetch", event => {
         })
         .catch(async () =>
           (await caches.match(request)) ||
-          (await caches.match("/Le_Grimoire_v0_2_0.html"))
+          (await caches.match("/le_grimoire.html"))
         )
     );
     return;

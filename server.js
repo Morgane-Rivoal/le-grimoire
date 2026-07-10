@@ -44,6 +44,56 @@ function sendJson(response, status, data) {
   response.end(JSON.stringify(data));
 }
 
+// --- Nominatim : cache mémoire + sérialisation à >= 1 req/s (politique d'usage) ---
+const NOMINATIM_UA = "Le-Grimoire/0.3 (botanical educational app)";
+const geocodeCache = new Map();
+const GEOCODE_CACHE_MAX = 500;
+let nominatimChain = Promise.resolve();
+let lastNominatimAt = 0;
+
+function geocodeCacheGet(key) {
+  return geocodeCache.has(key) ? geocodeCache.get(key) : undefined;
+}
+
+function geocodeCacheSet(key, value) {
+  geocodeCache.set(key, value);
+  if (geocodeCache.size > GEOCODE_CACHE_MAX) {
+    geocodeCache.delete(geocodeCache.keys().next().value);
+  }
+}
+
+function nominatimFetch(url) {
+  const run = async () => {
+    const wait = Math.max(0, 1100 - (Date.now() - lastNominatimAt));
+    if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+    lastNominatimAt = Date.now();
+    return fetch(url, {
+      headers: { "User-Agent": NOMINATIM_UA },
+      signal: AbortSignal.timeout(6000)
+    });
+  };
+  nominatimChain = nominatimChain.then(run, run);
+  return nominatimChain;
+}
+
+// --- Limitation de débit basique par IP sur /api/* ---
+const rateBuckets = new Map();
+function isRateLimited(ip, limit = 60, windowMs = 60000) {
+  const now = Date.now();
+  let bucket = rateBuckets.get(ip);
+  if (!bucket || now > bucket.resetAt) {
+    bucket = { count: 0, resetAt: now + windowMs };
+    rateBuckets.set(ip, bucket);
+  }
+  bucket.count++;
+  if (rateBuckets.size > 5000) {
+    for (const [key, value] of rateBuckets) {
+      if (now > value.resetAt) rateBuckets.delete(key);
+    }
+  }
+  return bucket.count > limit;
+}
+
 function textSentences(text) {
   return String(text || "")
     .replace(/\s+/g, " ")
@@ -129,6 +179,92 @@ async function enrichResults(data, language) {
   return data;
 }
 
+async function reverseGeocode(lat, lon, language) {
+  const latitude = Number(lat);
+  const longitude = Number(lon);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+
+  const lang = language === "en" ? "en" : "fr";
+  const cacheKey = `r:${latitude.toFixed(4)},${longitude.toFixed(4)}:${lang}`;
+  const cached = geocodeCacheGet(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const url = new URL("https://nominatim.openstreetmap.org/reverse");
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("lat", String(latitude));
+  url.searchParams.set("lon", String(longitude));
+  url.searchParams.set("zoom", "16");
+  url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("accept-language", lang);
+
+  try {
+    const response = await nominatimFetch(url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    const address = data?.address || {};
+    const road = address.road || address.pedestrian || address.footway || address.path || address.cycleway || "";
+    const locality = address.suburb || address.city_district || address.quarter || address.neighbourhood || "";
+    const city = address.city || address.town || address.village || address.municipality || address.hamlet || address.county || "";
+    const region = address.state || address.region || "";
+    const parts = [];
+    if (road) parts.push(road);
+    if (locality && locality !== city) parts.push(locality);
+    if (city) parts.push(city);
+    if (!parts.length && region) parts.push(region);
+    const label = parts.join(", ") ||
+      String(data?.display_name || "").split(",").slice(0, 2).map(part => part.trim()).filter(Boolean).join(", ");
+    if (!label) return null;
+    const result = { label, road, locality, city, region, country: address.country || "" };
+    geocodeCacheSet(cacheKey, result);
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+async function forwardGeocode(query, language) {
+  const q = String(query || "").trim();
+  if (!q || q.length > 160) return null;
+
+  const lang = language === "en" ? "en" : "fr";
+  const cacheKey = `f:${q.toLowerCase()}:${lang}`;
+  const cached = geocodeCacheGet(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("q", q);
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("accept-language", lang);
+
+  try {
+    const response = await nominatimFetch(url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    const first = Array.isArray(data) ? data[0] : null;
+    if (!first) return null;
+    const lat = Number(first.lat);
+    const lon = Number(first.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const address = first.address || {};
+    const road = address.road || address.pedestrian || address.footway || "";
+    const city = address.city || address.town || address.village || address.municipality || address.hamlet || address.county || "";
+    const parts = [];
+    if (road) parts.push(road);
+    if (city) parts.push(city);
+    const label = parts.join(", ") ||
+      String(first.display_name || "").split(",").slice(0, 2).map(part => part.trim()).filter(Boolean).join(", ") ||
+      q;
+    const result = { label, lat, lon };
+    geocodeCacheSet(cacheKey, result);
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 async function readBody(request) {
   const chunks = [];
   let size = 0;
@@ -200,8 +336,22 @@ async function identifyPlant(request, response, requestUrl) {
   }
 }
 
+// Inline handlers (onclick=...) et styles injectés par Leaflet imposent
+// 'unsafe-inline'. img-src https: couvre les tuiles OSM et les images Pl@ntNet/Wikipédia.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "img-src 'self' data: https:",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline'",
+  "connect-src 'self'",
+  "frame-src https://www.openstreetmap.org",
+  "form-action 'self'"
+].join("; ");
+
 function serveFile(response, pathname) {
-  const requestedPath = pathname === "/" ? "Le_Grimoire_v0_2_0.html" : pathname.slice(1);
+  const requestedPath = pathname === "/" ? "le_grimoire.html" : pathname.slice(1);
   const normalized = path.normalize(requestedPath);
   const filename = path.resolve(ROOT, normalized);
 
@@ -222,6 +372,7 @@ function serveFile(response, pathname) {
       "X-Frame-Options": "DENY",
       "Referrer-Policy": "no-referrer",
       "Permissions-Policy": "camera=(self), geolocation=(self)",
+      "Content-Security-Policy": CONTENT_SECURITY_POLICY,
       "Cache-Control": "no-cache"
     });
     fs.createReadStream(filename).pipe(response);
@@ -230,6 +381,14 @@ function serveFile(response, pathname) {
 
 const server = http.createServer(async (request, response) => {
   const requestUrl = new URL(request.url, `http://${request.headers.host || "localhost"}`);
+
+  if (requestUrl.pathname.startsWith("/api/")) {
+    const forwarded = String(request.headers["x-forwarded-for"] || "").split(",")[0].trim();
+    const ip = forwarded || request.socket.remoteAddress || "unknown";
+    if (isRateLimited(ip)) {
+      return sendJson(response, 429, { error: "Trop de requêtes. Réessaie dans un instant." });
+    }
+  }
 
   if (request.method === "POST" && requestUrl.pathname === "/api/identify") {
     return identifyPlant(request, response, requestUrl);
@@ -246,6 +405,23 @@ const server = http.createServer(async (request, response) => {
     const information = await wikipediaSpeciesInfo(name, language);
     return sendJson(response, information ? 200 : 404, information || {
       error: "Aucune information complémentaire trouvée."
+    });
+  }
+  if (request.method === "GET" && requestUrl.pathname === "/api/reverse-geocode") {
+    const lat = requestUrl.searchParams.get("lat");
+    const lon = requestUrl.searchParams.get("lon");
+    const language = requestUrl.searchParams.get("lang") || "fr";
+    const place = await reverseGeocode(lat, lon, language);
+    return sendJson(response, place ? 200 : 404, place || {
+      error: "Lieu introuvable pour ces coordonnées."
+    });
+  }
+  if (request.method === "GET" && requestUrl.pathname === "/api/geocode") {
+    const query = requestUrl.searchParams.get("q") || "";
+    const language = requestUrl.searchParams.get("lang") || "fr";
+    const place = await forwardGeocode(query, language);
+    return sendJson(response, place ? 200 : 404, place || {
+      error: "Lieu introuvable."
     });
   }
   if (request.method === "GET") {

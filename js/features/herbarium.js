@@ -3,6 +3,11 @@ let herbariumFilter = "all";
 let herbariumSort = "recent";
 let collectionRenderTimer = null;
 
+function cardTagsMarkup(tags){
+  if(!Array.isArray(tags) || !tags.length) return "";
+  return `<div class="card-tags">${tags.slice(0, 4).map(tag => `<span class="card-tag">${safeText(tag)}</span>`).join("")}</div>`;
+}
+
 function scheduleCollectionRender(){
   clearTimeout(collectionRenderTimer);
   collectionRenderTimer = setTimeout(renderCollection, 140);
@@ -58,6 +63,7 @@ function herbariumEntryMatches(id, entry, query){
       entry.family,
       entry.place,
       entry.note,
+      (entry.tags || []).join(" "),
       profile.summary,
       profile.benefits,
       profile.edibility
@@ -82,7 +88,8 @@ function herbariumEntryMatches(id, entry, query){
     plant.summary,
     plant.tradition,
     entry?.place,
-    entry?.note
+    entry?.note,
+    (entry?.tags || []).join(" ")
   ].join(" ").toLowerCase();
   const medicinal = isMedicinalText(`${plant.tradition || ""} ${plant.summary || ""}`);
   return haystack.includes(query) && (
@@ -115,10 +122,10 @@ function renderCollection(){
         <p class="latin">${safeText(personal.latin)}</p>
         <div class="badges">
           <span class="badge">${t("status.observation")}</span>
-          <span class="badge">${safeText(personal.score)} %</span>
           <span class="badge ${profile.status === "comestible" ? "" : "red"}">${safeText(profile.edibility || t("status.unknown"))}</span>
         </div>
         <p class="small-note">${safeText(personal.place || t("plant.placeMissing"))}</p>
+        ${cardTagsMarkup(personal.tags)}
       `;
       fragment.appendChild(card);
       return;
@@ -136,6 +143,7 @@ function renderCollection(){
       <p class="latin">${plant.latin}</p>
       <div class="badges"><span class="badge">${t("plant.inHerbarium")}</span></div>
       <p class="small-note">${safeText(personal.place || t("plant.placeMissing"))}</p>
+      ${cardTagsMarkup(personal.tags)}
     `;
     fragment.appendChild(card);
   });

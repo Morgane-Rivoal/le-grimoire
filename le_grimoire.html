@@ -7,15 +7,35 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Le Grimoire" />
-<title>Le Grimoire &mdash; v0.2.0</title>
+<title>Le Grimoire &mdash; v0.3.0-alpha</title>
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="icon" href="/assets/icons/icon-192.png" />
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="assets/vendor/leaflet/MarkerCluster.css">
+<link rel="stylesheet" href="assets/vendor/leaflet/MarkerCluster.Default.css">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 <div class="app">
 <div id="grimoireToast" class="grimoire-toast hidden" role="status" aria-live="polite"></div>
+<div id="onboarding" class="onboarding hidden" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+  <div class="onboarding-card">
+    <button class="onboarding-skip" onclick="finishOnboarding()" data-i18n="onboarding.skip">Passer</button>
+    <div id="onboardingIcon" class="onboarding-icon" aria-hidden="true">📖</div>
+    <h2 id="onboardingTitle"></h2>
+    <p id="onboardingText"></p>
+    <div id="onboardingDots" class="onboarding-dots"></div>
+    <button id="onboardingNext" class="primary" onclick="onboardingNext()"></button>
+  </div>
+</div>
+<div id="updateBanner" class="update-banner hidden" role="status" aria-live="polite">
+  <span data-i18n="pwa.updateAvailable">Une nouvelle version est disponible.</span>
+  <span class="update-banner-actions">
+    <button class="update-apply" onclick="applyUpdate()" data-i18n="pwa.updateNow">Recharger</button>
+    <button class="update-dismiss" onclick="dismissUpdate()" aria-label="Ignorer" data-i18n-aria-label="pwa.updateDismiss">✕</button>
+  </span>
+</div>
 
 <section id="cover" class="screen active">
   <div class="cover">
@@ -27,6 +47,7 @@
       <h1 class="cover-title">Le<br>Grimoire</h1>
       <p class="devise" data-i18n="cover.motto">Observer. Comprendre. Respecter.</p>
       <button class="primary" onclick="go('preface')" data-i18n="cover.open">Ouvrir le Grimoire</button>
+      <p class="app-version" data-i18n="app.version">v0.3.0-alpha</p>
     </div>
   </div>
 </section>
@@ -55,6 +76,8 @@
     <button class="menu-card" onclick="go('explorer')"><span><strong data-i18n="nav.explore"></strong><span data-i18n="menu.explore.description"></span></span><span class="menu-icon">🌿</span></button>
     <button class="menu-card" onclick="go('identifier')"><span><strong data-i18n="nav.identify"></strong><span data-i18n="menu.identify.description"></span></span><span class="menu-icon menu-loupe" aria-hidden="true">&#128269;</span></button>
     <button class="menu-card" onclick="go('herbier')"><span><strong data-i18n="menu.herbarium.title"></strong><span data-i18n="menu.herbarium.description"></span></span><span class="menu-icon">📖</span></button>
+    <button class="menu-card" onclick="go('carte')"><span><strong data-i18n="nav.map">Carte</strong><span data-i18n="menu.map.description"></span></span><span class="menu-icon">🗺️</span></button>
+    <button class="menu-card" onclick="go('tableau')"><span><strong data-i18n="dash.title">Tableau de bord</strong><span data-i18n="dash.description"></span></span><span class="menu-icon">📊</span></button>
     <button id="installAppButton" class="secondary install-app hidden" onclick="installApp()" data-i18n="pwa.install"></button>
     <p class="small-note" data-i18n="menu.version"></p>
   </div>
@@ -107,7 +130,13 @@
       <p id="photoHelp" class="small-note" data-i18n="identify.help"></p>
       <div id="identifyError" class="error-message hidden"></div>
       <button id="identifyButton" class="primary" type="submit" data-i18n="identify.submit"></button>
+      <button id="queueButton" class="secondary" type="button" onclick="queueObservation()" data-i18n="queue.saveLater">Enregistrer pour plus tard</button>
     </form>
+    <div id="queuePanel" class="queue-panel hidden">
+      <p class="kicker" data-i18n="queue.title">Photos en attente</p>
+      <p id="queueSummary" class="small-note"></p>
+      <button id="queueProcess" class="primary" type="button" onclick="processQueue()" data-i18n="queue.process">Traiter maintenant</button>
+    </div>
   </div>
 </section>
 
@@ -167,6 +196,30 @@
   </div>
 </section>
 
+<section id="tableau" class="screen">
+  <div class="page">
+    <div class="topbar">
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="dash.kicker">Vue d'ensemble</p><h2 data-i18n="dash.title">Tableau de bord</h2></div>
+      <span></span>
+    </div>
+    <div id="dashboardMount"></div>
+  </div>
+</section>
+
+<section id="carte" class="screen">
+  <div class="page">
+    <div class="topbar">
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="map.kicker">Carnet géographique</p><h2 data-i18n="nav.map">Carte</h2></div>
+      <span></span>
+    </div>
+    <p data-i18n="map.intro">Retrouve tes découvertes géolocalisées et reviens à leur fiche d'un simple appui.</p>
+    <div id="discoveryMap" class="discovery-map"></div>
+    <p id="mapEmpty" class="small-note" data-i18n="map.empty">Aucune découverte géolocalisée pour l'instant. Ajoute un lieu à une plante de ton herbier pour la voir apparaître ici.</p>
+  </div>
+</section>
+
 <section id="parametres" class="screen">
   <div class="page">
     <div class="topbar">
@@ -185,6 +238,12 @@
           <option value="en">EN</option>
         </select>
       </label>
+      <div class="settings-row">
+        <span>
+          <strong data-i18n="settings.version">Version de l'application</strong>
+        </span>
+        <span class="settings-version" data-i18n="app.version">v0.3.0-alpha</span>
+      </div>
     </div>
   </div>
 </section>
@@ -192,20 +251,24 @@
 </div>
 
 <nav id="bottomNav" class="bookmark-nav hidden">
-  <button class="home-button" onclick="go('sommaire')" data-i18n-aria-label="nav.home" aria-label="Accueil">🏠</button>
-  <button data-nav="explorer" onclick="go('explorer')" data-i18n="nav.explore"></button>
-  <button data-nav="identifier" onclick="go('identifier')" data-i18n="nav.identify"></button>
-  <button data-nav="herbier" onclick="go('herbier')" data-i18n="nav.herbarium"></button>
-  <button data-nav="parametres" onclick="go('parametres')" data-i18n="nav.settings">Paramètres</button>
+  <button data-nav="sommaire" onclick="go('sommaire')"><span class="nav-icon" aria-hidden="true">🏠</span><span class="nav-label" data-i18n="nav.home">Accueil</span></button>
+  <button data-nav="explorer" onclick="go('explorer')"><span class="nav-icon" aria-hidden="true">🌿</span><span class="nav-label" data-i18n="nav.explore"></span></button>
+  <button data-nav="identifier" onclick="go('identifier')"><span class="nav-icon" aria-hidden="true">🔍</span><span class="nav-label" data-i18n="nav.identify"></span></button>
+  <button data-nav="herbier" onclick="go('herbier')"><span class="nav-icon" aria-hidden="true">📖</span><span class="nav-label" data-i18n="nav.herbarium"></span></button>
+  <button data-nav="carte" onclick="go('carte')"><span class="nav-icon" aria-hidden="true">🗺️</span><span class="nav-label" data-i18n="nav.map">Carte</span></button>
+  <button data-nav="parametres" onclick="go('parametres')"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label" data-i18n="nav.settings">Paramètres</span></button>
 </nav>
 
 
+<script src="assets/vendor/leaflet/leaflet.js" charset="UTF-8"></script>
+<script src="assets/vendor/leaflet/leaflet.markercluster.js" charset="UTF-8"></script>
 <script src="js/i18n.js" charset="UTF-8"></script>
 <script src="js/data/illustrations.js" charset="UTF-8"></script>
 <script src="js/data/plants.js" charset="UTF-8"></script>
 <script src="js/data/knowledge-profiles.js" charset="UTF-8"></script>
 <script src="js/data/content-en.js" charset="UTF-8"></script>
 <script src="js/storage/photos.js" charset="UTF-8"></script>
+<script src="js/storage/queue.js" charset="UTF-8"></script>
 <script src="js/ui/plant-plates.js" charset="UTF-8"></script>
 <script src="js/core/utils.js" charset="UTF-8"></script>
 <script src="js/core/state.js" charset="UTF-8"></script>
@@ -215,6 +278,11 @@
 <script src="js/features/identification.js" charset="UTF-8"></script>
 <script src="js/features/plant-detail.js" charset="UTF-8"></script>
 <script src="js/features/herbarium.js" charset="UTF-8"></script>
+<script src="js/features/map.js" charset="UTF-8"></script>
+<script src="js/features/achievements.js" charset="UTF-8"></script>
+<script src="js/features/dashboard.js" charset="UTF-8"></script>
+<script src="js/features/onboarding.js" charset="UTF-8"></script>
+<script src="js/features/offline-queue.js" charset="UTF-8"></script>
 <script src="js/init.js" charset="UTF-8"></script>
 <script src="js/pwa.js" charset="UTF-8"></script>
 </body>

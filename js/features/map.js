@@ -1,0 +1,194 @@
+// Carte des découvertes : place sur une carte interactive (Leaflet) chaque
+// plante de l'herbier disposant de coordonnées, avec retour vers sa fiche.
+let discoveryMap = null;
+let discoveryMarkers = null;
+let userLocationMarker = null;
+
+function saveMapView(){
+  if(!discoveryMap) return;
+  try{
+    const center = discoveryMap.getCenter();
+    localStorage.setItem("grimoire-map-view", JSON.stringify({lat:center.lat, lon:center.lng, zoom:discoveryMap.getZoom()}));
+  } catch{}
+}
+
+function loadMapView(){
+  try{
+    const saved = JSON.parse(localStorage.getItem("grimoire-map-view") || "null");
+    if(saved && Number.isFinite(saved.lat) && Number.isFinite(saved.lon) && Number.isFinite(saved.zoom)) return saved;
+  } catch{}
+  return null;
+}
+
+function locateOnMap(){
+  if(!discoveryMap || !("geolocation" in navigator)){
+    showToast(t("plant.locationUnavailable"));
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const point = [position.coords.latitude, position.coords.longitude];
+      if(userLocationMarker){
+        userLocationMarker.setLatLng(point);
+      } else {
+        userLocationMarker = L.marker(point, {
+          icon: L.divIcon({className:"map-pin-wrap", html:`<span class="map-pin-me">📍</span>`, iconSize:[26,26], iconAnchor:[13,24]})
+        }).addTo(discoveryMap);
+      }
+      discoveryMap.setView(point, Math.max(discoveryMap.getZoom(), 14));
+    },
+    () => showToast(t("plant.locationDenied")),
+    {enableHighAccuracy:false, timeout:8000}
+  );
+}
+
+function discoveryEntries(){
+  const items = [];
+  Object.entries(collection).forEach(([id, entry]) => {
+    const lat = Number(entry?.lat);
+    const lon = Number(entry?.lon);
+    if(!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    if(lat === 0 && lon === 0) return;
+    if(entry.type === "identification"){
+      items.push({
+        id, lat, lon,
+        name: entry.name || t("image.observation"),
+        place: entry.place || "",
+        iconMarkup: plantPlateMarkup(entry),
+        open: () => openIdentifiedPlant(id)
+      });
+      return;
+    }
+    const sourcePlant = plants.find(plant => plant.id === id);
+    if(!sourcePlant) return;
+    const plant = localizedPlant(sourcePlant);
+    items.push({
+      id, lat, lon,
+      name: plant.name,
+      place: entry.place || "",
+      iconMarkup: plantStaticImageMarkup(plant),
+      open: () => openPlant(id)
+    });
+  });
+  return items;
+}
+
+function renderDiscoveryMap(){
+  const container = document.getElementById("discoveryMap");
+  const empty = document.getElementById("mapEmpty");
+  if(!container || !empty) return;
+
+  const entries = discoveryEntries();
+
+  if(typeof L === "undefined"){
+    empty.textContent = t("map.libraryMissing");
+    empty.style.display = "block";
+    container.style.display = "none";
+    return;
+  }
+
+  if(!entries.length){
+    empty.textContent = t("map.empty");
+    empty.style.display = "block";
+    container.style.display = "none";
+    return;
+  }
+
+  empty.style.display = "none";
+  container.style.display = "block";
+
+  if(!discoveryMap){
+    discoveryMap = L.map(container, {zoomControl:true, attributionControl:true});
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap"
+    }).addTo(discoveryMap);
+    // Regroupe les marqueurs proches en amas cliquables (moins de fouillis).
+    discoveryMarkers = (typeof L.markerClusterGroup === "function")
+      ? L.markerClusterGroup({showCoverageOnHover:false, maxClusterRadius:46, spiderfyOnMaxZoom:true})
+      : L.layerGroup();
+    discoveryMarkers.addTo(discoveryMap);
+
+    const LocateControl = L.Control.extend({
+      options:{position:"topleft"},
+      onAdd:function(){
+        const button = L.DomUtil.create("button", "discovery-locate");
+        button.type = "button";
+        button.title = t("map.locate");
+        button.setAttribute("aria-label", t("map.locate"));
+        button.innerHTML = "◎";
+        L.DomEvent.on(button, "click", L.DomEvent.stop).on(button, "click", locateOnMap);
+        return button;
+      }
+    });
+    discoveryMap.addControl(new LocateControl());
+    discoveryMap.on("moveend", saveMapView);
+  }
+
+  discoveryMarkers.clearLayers();
+
+  // Plusieurs plantes peuvent partager le même lieu : on écarte légèrement en
+  // cercle les marqueurs superposés pour qu'ils restent tous visibles/cliquables.
+  const groups = new Map();
+  entries.forEach(item => {
+    const key = `${item.lat.toFixed(5)},${item.lon.toFixed(5)}`;
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  });
+  groups.forEach(group => {
+    if(group.length < 2){
+      group[0].displayLat = group[0].lat;
+      group[0].displayLon = group[0].lon;
+      return;
+    }
+    const radius = 0.00014; // ~15 m
+    group.forEach((item, index) => {
+      const angle = (2 * Math.PI * index) / group.length;
+      const latRad = item.lat * Math.PI / 180;
+      item.displayLat = item.lat + radius * Math.cos(angle);
+      item.displayLon = item.lon + (radius * Math.sin(angle)) / Math.max(0.2, Math.cos(latRad));
+    });
+  });
+
+  const bounds = [];
+  entries.forEach(item => {
+    const icon = L.divIcon({
+      className: "map-pin-wrap",
+      html: `<span class="map-pin-medallion">${item.iconMarkup}</span>`,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+      popupAnchor: [0, -20]
+    });
+    const marker = L.marker([item.displayLat, item.displayLon], {icon, title: item.name}).addTo(discoveryMarkers);
+    marker.bindPopup(
+      `<div class="map-popup">
+        <strong>${safeText(item.name)}</strong>
+        <span>${safeText(item.place || t("plant.placeMissing"))}</span>
+        <button type="button" class="map-popup-open">${t("map.openSheet")}</button>
+      </div>`
+    );
+    marker.on("popupopen", event => {
+      const element = event.popup.getElement();
+      const button = element && element.querySelector(".map-popup-open");
+      if(button) button.onclick = () => item.open();
+    });
+    bounds.push([item.displayLat, item.displayLon]);
+  });
+
+  // Le conteneur vient d'être affiché : on laisse la mise en page se stabiliser
+  // avant de recalculer la taille et le cadrage de la carte.
+  const savedView = loadMapView();
+  setTimeout(() => {
+    if(!discoveryMap) return;
+    discoveryMap.invalidateSize();
+    // On restaure la dernière vue consultée si elle existe, sinon on cadre
+    // automatiquement sur l'ensemble des découvertes.
+    if(savedView){
+      discoveryMap.setView([savedView.lat, savedView.lon], savedView.zoom);
+    } else if(bounds.length === 1){
+      discoveryMap.setView(bounds[0], 14);
+    } else {
+      discoveryMap.fitBounds(bounds, {padding:[34, 34], maxZoom:15});
+    }
+  }, 90);
+}
