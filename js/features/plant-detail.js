@@ -1,7 +1,13 @@
 // Fiche plante (locale ou observée) : rendu, notes personnelles et photo d’observation.
 let currentPlantView = null;
 let activeObservationPhotoUrl = null;
+let activeLocalPhotoUrl = null;
+let ficheMiniMap = null;
 const enrichmentRequests = new Set();
+
+function validCoord(value){
+  return value !== "" && value !== undefined && value !== null && !Number.isNaN(Number(value));
+}
 
 function valueOrTodo(value){
   return value && String(value).trim() ? value : t("common.complete");
@@ -41,18 +47,32 @@ function shareIdentifiedPlant(id){
 }
 
 function locationMapMarkup(lat, lon){
-  if(lat === "" || lon === "" || lat === undefined || lon === undefined || Number.isNaN(lat) || Number.isNaN(lon)){
-    return "";
-  }
-  const delta = 0.01;
-  const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
+  if(!validCoord(lat) || !validCoord(lon)) return "";
   const osmUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=15/${lat}/${lon}`;
   return `
     <div class="observation-map">
-      <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${safeText(bbox)}&marker=${safeText(lat)}%2C${safeText(lon)}" loading="lazy" title="${safeText(t("plant.mapTitle"))}"></iframe>
+      <div id="ficheMiniMap" class="fiche-mini-map"></div>
       <a href="${safeText(osmUrl)}" target="_blank" rel="noopener noreferrer">${t("plant.viewOnMap")}</a>
     </div>
   `;
+}
+
+// Mini-carte Leaflet cohérente avec l'écran Carte (remplace l'ancienne iframe OSM).
+function hydrateFicheMap(lat, lon){
+  const container = document.getElementById("ficheMiniMap");
+  if(!container || typeof L === "undefined" || !validCoord(lat) || !validCoord(lon)) return;
+  if(ficheMiniMap){
+    ficheMiniMap.remove();
+    ficheMiniMap = null;
+  }
+  const point = [Number(lat), Number(lon)];
+  ficheMiniMap = L.map(container, {zoomControl:false, attributionControl:false, scrollWheelZoom:false});
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(ficheMiniMap);
+  L.marker(point, {
+    icon: L.divIcon({className:"map-pin-wrap", html:`<span class="map-pin-dot">📍</span>`, iconSize:[26,26], iconAnchor:[13,24]})
+  }).addTo(ficheMiniMap);
+  ficheMiniMap.setView(point, 14);
+  setTimeout(() => { if(ficheMiniMap) ficheMiniMap.invalidateSize(); }, 80);
 }
 
 function locationFieldsMarkup(entry){
@@ -116,7 +136,10 @@ function captureLocation(){
       document.getElementById("latInput").value = lat;
       document.getElementById("lonInput").value = lon;
       const mapMount = document.getElementById("locationMap");
-      if(mapMount) mapMount.innerHTML = locationMapMarkup(lat, lon);
+      if(mapMount){
+        mapMount.innerHTML = locationMapMarkup(lat, lon);
+        hydrateFicheMap(lat, lon);
+      }
       showToast(t("plant.locationCaptured"));
 
       const placeInput = document.getElementById("placeInput");
@@ -138,6 +161,57 @@ function captureLocation(){
 function readCoordInput(id){
   const raw = document.getElementById(id)?.value;
   return raw !== "" && raw != null ? parseFloat(raw) : undefined;
+}
+
+// --- Étiquettes / carnets personnalisés ---
+function tagChipMarkup(tag){
+  return `<span class="tag-chip" data-tag="${safeText(tag)}">${safeText(tag)}<button type="button" onclick="removeTagChip(this)" aria-label="${t("tags.remove")}">✕</button></span>`;
+}
+
+function tagsEditorMarkup(entry){
+  const tags = Array.isArray(entry?.tags) ? entry.tags : [];
+  return `
+    <div class="tags-editor">
+      <span class="tags-label">${t("tags.label")}</span>
+      <div id="tagChips" class="tag-chips">${tags.map(tagChipMarkup).join("")}</div>
+      <div class="tag-add">
+        <input id="tagInput" placeholder="${t("tags.placeholder")}" onkeydown="tagInputKey(event)" maxlength="24">
+        <button type="button" class="secondary" onclick="addTagFromInput()">${t("tags.add")}</button>
+      </div>
+    </div>
+  `;
+}
+
+function addTagFromInput(){
+  const input = document.getElementById("tagInput");
+  const chips = document.getElementById("tagChips");
+  if(!input || !chips) return;
+  const value = input.value.trim();
+  if(value){
+    const existing = Array.from(chips.querySelectorAll(".tag-chip")).map(chip => chip.dataset.tag.toLowerCase());
+    if(!existing.includes(value.toLowerCase())){
+      chips.insertAdjacentHTML("beforeend", tagChipMarkup(value));
+    }
+  }
+  input.value = "";
+  input.focus();
+}
+
+function tagInputKey(event){
+  if(event.key === "Enter"){
+    event.preventDefault();
+    addTagFromInput();
+  }
+}
+
+function removeTagChip(button){
+  button.closest(".tag-chip")?.remove();
+}
+
+function readTags(){
+  const chips = document.getElementById("tagChips");
+  if(!chips) return [];
+  return Array.from(chips.querySelectorAll(".tag-chip")).map(chip => chip.dataset.tag).filter(Boolean);
 }
 
 function identityMarkup(fields){
@@ -263,6 +337,7 @@ function openIdentifiedPlant(id){
     <div class="topbar">
       <button class="back" onclick="goBack('herbier')" aria-label="Retour">‹</button>
       <div class="topbar-actions">
+        <button class="icon-button" onclick="window.print()" aria-label="${t("plant.exportPdf")}">🖨️</button>
         <button class="icon-button" onclick="shareIdentifiedPlant('${id}')" aria-label="${t("action.share")}">🔗</button>
         <button class="secondary" onclick="deleteIdentifiedPlant('${id}')">${t("common.remove")}</button>
       </div>
@@ -308,12 +383,28 @@ function openIdentifiedPlant(id){
       ${locationFieldsMarkup(entry)}
       <input id="dateInput" type="date" value="${safeText(entry.date || "")}">
       <textarea id="noteInput" placeholder="${t("plant.notes")}">${safeText(entry.note || "")}</textarea>
-      <button class="danger" onclick="saveIdentifiedPersonal('${id}')">${t("common.save")}</button>
+      ${tagsEditorMarkup(entry)}
+      <button id="ficheSaveButton" class="danger" onclick="saveIdentifiedPersonal('${id}')">${t("common.save")}</button>
     </div>
   `;
   go("plantPage");
   hydrateObservationPhoto(id, entry);
+  hydrateFicheMap(entry.lat, entry.lon);
   refreshMissingEnrichment(id, entry);
+}
+
+// État occupé du bouton de sauvegarde pendant les appels réseau (géocodage).
+function setFicheSaveBusy(busy){
+  const button = document.getElementById("ficheSaveButton");
+  if(!button) return;
+  if(busy){
+    button.dataset.label = button.textContent;
+    button.disabled = true;
+    button.textContent = t("common.saving");
+  } else {
+    button.disabled = false;
+    if(button.dataset.label) button.textContent = button.dataset.label;
+  }
 }
 
 async function refreshMissingEnrichment(id, entry){
@@ -362,17 +453,24 @@ async function saveIdentifiedPersonal(id){
   const entry = collection[id];
   if(!entry || entry.type !== "identification") return;
   const place = document.getElementById("placeInput").value;
+  const note = document.getElementById("noteInput").value;
+  const date = document.getElementById("dateInput").value;
+  const tags = readTags();
+  setFicheSaveBusy(true);
   const {lat, lon} = await coordinatesForEntry(place, readCoordInput("latInput"), readCoordInput("lonInput"));
   entry.place = place;
-  entry.date = document.getElementById("dateInput").value;
-  entry.note = document.getElementById("noteInput").value;
+  entry.date = date;
+  entry.note = note;
+  entry.tags = tags;
   entry.lat = lat;
   entry.lon = lon;
   if(!saveCollection()){
+    setFicheSaveBusy(false);
     showToast(t("alert.saveFailed"), 5000);
     return;
   }
   renderPlants();
+  if(typeof checkAchievements === "function") checkAchievements();
   showToast(t("alert.observationSaved"));
   openIdentifiedPlant(id);
 }
@@ -403,6 +501,7 @@ function openPlant(id){
     <div class="topbar">
       <button class="back" onclick="goBack('explorer')" aria-label="Retour">‹</button>
       <div class="topbar-actions">
+        <button class="icon-button" onclick="window.print()" aria-label="${t("plant.exportPdf")}">🖨️</button>
         <button class="icon-button" onclick="shareLocalPlant('${plant.id}')" aria-label="${t("action.share")}">🔗</button>
         <button class="secondary" onclick="toggleCollection('${plant.id}')">${t(saved ? "plant.inHerbarium" : "plant.addHerbarium")}</button>
       </div>
@@ -431,7 +530,7 @@ function openPlant(id){
     ${unifiedFicheSections({
       summary: plant.summary,
       recognition: plant.recognition,
-      photo: `<p>${safeText(t("plant.plateNote"))}</p>`,
+      photo: `<div id="localPhotoMount"><p>${safeText(t("photo.loading"))}</p></div>`,
       consumption: plant.cuisine,
       benefits: plant.tradition,
       care: plant.culture,
@@ -446,11 +545,62 @@ function openPlant(id){
       ${locationFieldsMarkup(saved)}
       <input id="dateInput" type="date" value="${saved?.date || ""}">
       <textarea id="noteInput" placeholder="${t("plant.notes")}">${safeText(saved?.note || "")}</textarea>
-      <div class="personal-photo">${t("plant.personalPhotoSoon")}</div>
-      <button class="danger" onclick="savePersonal('${plant.id}')">${t("plant.seal")}</button>
+      ${tagsEditorMarkup(saved)}
+      <label class="photo-picker personal-photo-picker">
+        <span>${t("plant.addPhoto")}</span>
+        <input type="file" accept="image/jpeg,image/png,image/webp,.webp" onchange="addPersonalPhoto('${plant.id}', this)">
+      </label>
+      <button id="ficheSaveButton" class="danger" onclick="savePersonal('${plant.id}')">${t("plant.seal")}</button>
     </div>
   `;
   go("plantPage");
+  hydrateLocalPhoto(id, plant);
+  hydrateFicheMap(saved?.lat, saved?.lon);
+}
+
+async function hydrateLocalPhoto(id, plant){
+  const mount = document.getElementById("localPhotoMount");
+  if(!mount) return;
+  if(activeLocalPhotoUrl){
+    URL.revokeObjectURL(activeLocalPhotoUrl);
+    activeLocalPhotoUrl = null;
+  }
+  try{
+    const blob = await getObservationPhoto(id);
+    if(blob){
+      activeLocalPhotoUrl = URL.createObjectURL(blob);
+      mount.innerHTML = `<div class="observation-photo"><img src="${activeLocalPhotoUrl}" alt="${safeText(t("photo.observationAlt", {name:plant.name}))}"><span>${t("photo.yours")}</span></div>`;
+      return;
+    }
+  } catch{}
+  mount.innerHTML = `<p>${safeText(t("plant.plateNote"))}</p>`;
+}
+
+async function addPersonalPhoto(id, input){
+  const file = input?.files?.[0];
+  if(!file) return;
+  if(!isAcceptedImage(file)){
+    showToast(t("error.format"));
+    return;
+  }
+  input.value = "";
+  showToast(t("photo.loading"));
+  try{
+    const prepared = await convertImageToJpeg(file);
+    await storeObservationPhoto(id, prepared);
+    if(!collection[id]){
+      collection[id] = {place:"", date:"", note:"", createdAt:new Date().toISOString()};
+    }
+    collection[id].hasPersonalPhoto = true;
+    saveCollection();
+    if(typeof checkAchievements === "function") checkAchievements();
+    showToast(t("plant.photoSaved"));
+    if(currentPlantView?.type === "local" && currentPlantView.id === id){
+      openPlant(id);
+    }
+  } catch{
+    showToast(t("plant.photoFailed"));
+  }
 }
 
 function refreshCurrentPlantView(){
@@ -472,6 +622,7 @@ function toggleCollection(id){
     showToast(t("alert.saveFailed"), 5000);
     return;
   }
+  if(!wasSaved && typeof checkAchievements === "function") checkAchievements();
   showToast(t(wasSaved ? "alert.pageRemoved" : "alert.pageAdded"));
   openPlant(id);
 }
@@ -479,20 +630,28 @@ function toggleCollection(id){
 async function savePersonal(id){
   const previous = collection[id] ? { ...collection[id] } : null;
   const place = document.getElementById("placeInput").value;
+  const date = document.getElementById("dateInput").value;
+  const note = document.getElementById("noteInput").value;
+  const tags = readTags();
+  setFicheSaveBusy(true);
   const {lat, lon} = await coordinatesForEntry(place, readCoordInput("latInput"), readCoordInput("lonInput"));
   collection[id] = {
+    ...previous,
     place,
-    date: document.getElementById("dateInput").value,
-    note: document.getElementById("noteInput").value,
+    date,
+    note,
+    tags,
     lat,
     lon,
     createdAt: previous?.createdAt || new Date().toISOString()
   };
   if(!saveCollection()){
     if(previous) collection[id] = previous; else delete collection[id];
+    setFicheSaveBusy(false);
     showToast(t("alert.saveFailed"), 5000);
     return;
   }
+  if(typeof checkAchievements === "function") checkAchievements();
   showToast(t("alert.personalSaved"));
   openPlant(id);
 }

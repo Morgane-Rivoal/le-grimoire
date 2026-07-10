@@ -184,6 +184,7 @@ async function processQueue(){
   if(processButton) processButton.disabled = false;
   if(typeof renderPlants === "function") renderPlants();
   if(typeof renderCollection === "function") renderCollection();
+  if(processed && typeof checkAchievements === "function") checkAchievements();
   await refreshQueuePanel();
   showToast(processed ? t("queue.done", {count:processed}) : t("queue.noneProcessed"));
 }

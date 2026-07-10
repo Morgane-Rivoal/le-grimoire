@@ -288,6 +288,17 @@ async function saveIdentifiedPlant(index, useCorrection = false){
       entry.shortLatin = correctedLatin;
     }
   }
+  // Détection de doublon : même nom scientifique déjà présent dans l'herbier.
+  const duplicateId = Object.keys(collection).find(key => {
+    const existing = collection[key];
+    return existing?.type === "identification" && existing.shortLatin && entry.shortLatin &&
+      existing.shortLatin.toLowerCase() === entry.shortLatin.toLowerCase();
+  });
+  if(duplicateId && !confirm(t("duplicate.confirm", {name: collection[duplicateId].name || entry.name}))){
+    openIdentifiedPlant(duplicateId);
+    return;
+  }
+
   const localPlant = findLocalPlant(result.species);
   const profile = knowledgeForSpecies(entry, localPlant);
   const botanicalNote = botanicalNoteFor(entry, profile, localPlant);
@@ -339,6 +350,7 @@ async function saveIdentifiedPlant(index, useCorrection = false){
     }
   }
   renderPlants();
+  if(typeof checkAchievements === "function") checkAchievements();
   showToast(t("alert.identificationSaved"));
   openIdentifiedPlant(id);
 }

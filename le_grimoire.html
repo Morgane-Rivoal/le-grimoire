@@ -12,11 +12,30 @@
 <link rel="icon" href="/assets/icons/icon-192.png" />
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
 <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="assets/vendor/leaflet/MarkerCluster.css">
+<link rel="stylesheet" href="assets/vendor/leaflet/MarkerCluster.Default.css">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 <div class="app">
 <div id="grimoireToast" class="grimoire-toast hidden" role="status" aria-live="polite"></div>
+<div id="onboarding" class="onboarding hidden" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+  <div class="onboarding-card">
+    <button class="onboarding-skip" onclick="finishOnboarding()" data-i18n="onboarding.skip">Passer</button>
+    <div id="onboardingIcon" class="onboarding-icon" aria-hidden="true">📖</div>
+    <h2 id="onboardingTitle"></h2>
+    <p id="onboardingText"></p>
+    <div id="onboardingDots" class="onboarding-dots"></div>
+    <button id="onboardingNext" class="primary" onclick="onboardingNext()"></button>
+  </div>
+</div>
+<div id="updateBanner" class="update-banner hidden" role="status" aria-live="polite">
+  <span data-i18n="pwa.updateAvailable">Une nouvelle version est disponible.</span>
+  <span class="update-banner-actions">
+    <button class="update-apply" onclick="applyUpdate()" data-i18n="pwa.updateNow">Recharger</button>
+    <button class="update-dismiss" onclick="dismissUpdate()" aria-label="Ignorer" data-i18n-aria-label="pwa.updateDismiss">✕</button>
+  </span>
+</div>
 
 <section id="cover" class="screen active">
   <div class="cover">
@@ -58,6 +77,7 @@
     <button class="menu-card" onclick="go('identifier')"><span><strong data-i18n="nav.identify"></strong><span data-i18n="menu.identify.description"></span></span><span class="menu-icon menu-loupe" aria-hidden="true">&#128269;</span></button>
     <button class="menu-card" onclick="go('herbier')"><span><strong data-i18n="menu.herbarium.title"></strong><span data-i18n="menu.herbarium.description"></span></span><span class="menu-icon">📖</span></button>
     <button class="menu-card" onclick="go('carte')"><span><strong data-i18n="nav.map">Carte</strong><span data-i18n="menu.map.description"></span></span><span class="menu-icon">🗺️</span></button>
+    <button class="menu-card" onclick="go('tableau')"><span><strong data-i18n="dash.title">Tableau de bord</strong><span data-i18n="dash.description"></span></span><span class="menu-icon">📊</span></button>
     <button id="installAppButton" class="secondary install-app hidden" onclick="installApp()" data-i18n="pwa.install"></button>
     <p class="small-note" data-i18n="menu.version"></p>
   </div>
@@ -176,6 +196,17 @@
   </div>
 </section>
 
+<section id="tableau" class="screen">
+  <div class="page">
+    <div class="topbar">
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="dash.kicker">Vue d'ensemble</p><h2 data-i18n="dash.title">Tableau de bord</h2></div>
+      <span></span>
+    </div>
+    <div id="dashboardMount"></div>
+  </div>
+</section>
+
 <section id="carte" class="screen">
   <div class="page">
     <div class="topbar">
@@ -230,6 +261,7 @@
 
 
 <script src="assets/vendor/leaflet/leaflet.js" charset="UTF-8"></script>
+<script src="assets/vendor/leaflet/leaflet.markercluster.js" charset="UTF-8"></script>
 <script src="js/i18n.js" charset="UTF-8"></script>
 <script src="js/data/illustrations.js" charset="UTF-8"></script>
 <script src="js/data/plants.js" charset="UTF-8"></script>
@@ -247,6 +279,9 @@
 <script src="js/features/plant-detail.js" charset="UTF-8"></script>
 <script src="js/features/herbarium.js" charset="UTF-8"></script>
 <script src="js/features/map.js" charset="UTF-8"></script>
+<script src="js/features/achievements.js" charset="UTF-8"></script>
+<script src="js/features/dashboard.js" charset="UTF-8"></script>
+<script src="js/features/onboarding.js" charset="UTF-8"></script>
 <script src="js/features/offline-queue.js" charset="UTF-8"></script>
 <script src="js/init.js" charset="UTF-8"></script>
 <script src="js/pwa.js" charset="UTF-8"></script>

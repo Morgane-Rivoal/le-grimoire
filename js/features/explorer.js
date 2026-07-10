@@ -85,7 +85,8 @@ function identifiedPlantMatches(entry, query){
     entry.benefits,
     entry.care,
     entry.place,
-    entry.note
+    entry.note,
+    (entry.tags || []).join(" ")
   ].join(" ").toLowerCase();
   const status = entry.safetyStatus || "inconnu";
   const filterOk =

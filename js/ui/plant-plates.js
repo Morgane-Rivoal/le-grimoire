@@ -25,7 +25,25 @@ function hashString(text){
   return hash >>> 0;
 }
 
+// Les planches sont déterministes : on mémorise le markup par clé d'espèce pour
+// éviter de régénérer le même SVG à chaque rendu de grille ou de carte.
+const plateCache = new Map();
+const PLATE_CACHE_MAX = 400;
+
 function plantPlateMarkup(entry){
+  const key = `${entry.name || ""}|${entry.latin || ""}|${entry.shortLatin || ""}|${entry.family || ""}`.toLowerCase();
+  let markup = plateCache.get(key);
+  if(markup === undefined){
+    markup = buildPlantPlate(entry);
+    plateCache.set(key, markup);
+    if(plateCache.size > PLATE_CACHE_MAX){
+      plateCache.delete(plateCache.keys().next().value);
+    }
+  }
+  return markup;
+}
+
+function buildPlantPlate(entry){
   const name = safeText(entry.name || t("image.observation"));
   const haystack = `${entry.name || ""} ${entry.latin || ""} ${entry.shortLatin || ""}`.toLowerCase();
   const seedText = `${entry.name || ""}|${entry.latin || ""}|${entry.shortLatin || ""}|${entry.family || ""}`.toLowerCase();

@@ -28,6 +28,27 @@ async function installApp(){
   updateInstallButton();
 }
 
+let waitingServiceWorker = null;
+
+function showUpdateBanner(worker){
+  waitingServiceWorker = worker;
+  document.getElementById("updateBanner")?.classList.remove("hidden");
+}
+
+// Appliquée seulement sur action de l'utilisateur : on n'interrompt jamais
+// une tâche en cours (saisie, file d'attente) par un rechargement surprise.
+function applyUpdate(){
+  document.getElementById("updateBanner")?.classList.add("hidden");
+  if(waitingServiceWorker){
+    waitingServiceWorker.postMessage({type:"SKIP_WAITING"});
+    waitingServiceWorker = null;
+  }
+}
+
+function dismissUpdate(){
+  document.getElementById("updateBanner")?.classList.add("hidden");
+}
+
 if("serviceWorker" in navigator && location.protocol !== "file:"){
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/service-worker.js").then(registration => {
@@ -37,12 +58,12 @@ if("serviceWorker" in navigator && location.protocol !== "file:"){
         if(!worker) return;
         worker.addEventListener("statechange", () => {
           if(worker.state === "installed" && navigator.serviceWorker.controller){
-            worker.postMessage({type:"SKIP_WAITING"});
+            showUpdateBanner(worker);
           }
         });
       });
-      if(registration.waiting){
-        registration.waiting.postMessage({type:"SKIP_WAITING"});
+      if(registration.waiting && navigator.serviceWorker.controller){
+        showUpdateBanner(registration.waiting);
       }
     }).catch(error => {
       console.warn("Service worker registration failed:", error);

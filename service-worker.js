@@ -1,4 +1,4 @@
-const CACHE_VERSION = "grimoire-v0.3.0-pwa-14";
+const CACHE_VERSION = "grimoire-v0.3.0-pwa-15";
 const APP_SHELL = [
   "/",
   "/le_grimoire.html",
@@ -6,6 +6,9 @@ const APP_SHELL = [
   "/css/styles.css",
   "/assets/vendor/leaflet/leaflet.css",
   "/assets/vendor/leaflet/leaflet.js",
+  "/assets/vendor/leaflet/MarkerCluster.css",
+  "/assets/vendor/leaflet/MarkerCluster.Default.css",
+  "/assets/vendor/leaflet/leaflet.markercluster.js",
   "/js/i18n.js",
   "/js/data/illustrations.js",
   "/js/data/plants.js",
@@ -23,6 +26,9 @@ const APP_SHELL = [
   "/js/features/plant-detail.js",
   "/js/features/herbarium.js",
   "/js/features/map.js",
+  "/js/features/achievements.js",
+  "/js/features/dashboard.js",
+  "/js/features/onboarding.js",
   "/js/features/offline-queue.js",
   "/js/init.js",
   "/js/pwa.js",

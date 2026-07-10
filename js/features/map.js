@@ -2,6 +2,45 @@
 // plante de l'herbier disposant de coordonnées, avec retour vers sa fiche.
 let discoveryMap = null;
 let discoveryMarkers = null;
+let userLocationMarker = null;
+
+function saveMapView(){
+  if(!discoveryMap) return;
+  try{
+    const center = discoveryMap.getCenter();
+    localStorage.setItem("grimoire-map-view", JSON.stringify({lat:center.lat, lon:center.lng, zoom:discoveryMap.getZoom()}));
+  } catch{}
+}
+
+function loadMapView(){
+  try{
+    const saved = JSON.parse(localStorage.getItem("grimoire-map-view") || "null");
+    if(saved && Number.isFinite(saved.lat) && Number.isFinite(saved.lon) && Number.isFinite(saved.zoom)) return saved;
+  } catch{}
+  return null;
+}
+
+function locateOnMap(){
+  if(!discoveryMap || !("geolocation" in navigator)){
+    showToast(t("plant.locationUnavailable"));
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const point = [position.coords.latitude, position.coords.longitude];
+      if(userLocationMarker){
+        userLocationMarker.setLatLng(point);
+      } else {
+        userLocationMarker = L.marker(point, {
+          icon: L.divIcon({className:"map-pin-wrap", html:`<span class="map-pin-me">📍</span>`, iconSize:[26,26], iconAnchor:[13,24]})
+        }).addTo(discoveryMap);
+      }
+      discoveryMap.setView(point, Math.max(discoveryMap.getZoom(), 14));
+    },
+    () => showToast(t("plant.locationDenied")),
+    {enableHighAccuracy:false, timeout:8000}
+  );
+}
 
 function discoveryEntries(){
   const items = [];
@@ -64,7 +103,26 @@ function renderDiscoveryMap(){
       maxZoom: 19,
       attribution: "© OpenStreetMap"
     }).addTo(discoveryMap);
-    discoveryMarkers = L.layerGroup().addTo(discoveryMap);
+    // Regroupe les marqueurs proches en amas cliquables (moins de fouillis).
+    discoveryMarkers = (typeof L.markerClusterGroup === "function")
+      ? L.markerClusterGroup({showCoverageOnHover:false, maxClusterRadius:46, spiderfyOnMaxZoom:true})
+      : L.layerGroup();
+    discoveryMarkers.addTo(discoveryMap);
+
+    const LocateControl = L.Control.extend({
+      options:{position:"topleft"},
+      onAdd:function(){
+        const button = L.DomUtil.create("button", "discovery-locate");
+        button.type = "button";
+        button.title = t("map.locate");
+        button.setAttribute("aria-label", t("map.locate"));
+        button.innerHTML = "◎";
+        L.DomEvent.on(button, "click", L.DomEvent.stop).on(button, "click", locateOnMap);
+        return button;
+      }
+    });
+    discoveryMap.addControl(new LocateControl());
+    discoveryMap.on("moveend", saveMapView);
   }
 
   discoveryMarkers.clearLayers();
@@ -119,10 +177,15 @@ function renderDiscoveryMap(){
 
   // Le conteneur vient d'être affiché : on laisse la mise en page se stabiliser
   // avant de recalculer la taille et le cadrage de la carte.
+  const savedView = loadMapView();
   setTimeout(() => {
     if(!discoveryMap) return;
     discoveryMap.invalidateSize();
-    if(bounds.length === 1){
+    // On restaure la dernière vue consultée si elle existe, sinon on cadre
+    // automatiquement sur l'ensemble des découvertes.
+    if(savedView){
+      discoveryMap.setView([savedView.lat, savedView.lon], savedView.zoom);
+    } else if(bounds.length === 1){
       discoveryMap.setView(bounds[0], 14);
     } else {
       discoveryMap.fitBounds(bounds, {padding:[34, 34], maxZoom:15});
