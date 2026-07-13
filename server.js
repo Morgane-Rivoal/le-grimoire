@@ -1,6 +1,7 @@
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
+const heicConvert = require("heic-convert");
 
 const ROOT = __dirname;
 const MAX_UPLOAD_SIZE = 50 * 1024 * 1024;
@@ -42,6 +43,102 @@ function sendJson(response, status, data) {
     "Cache-Control": "no-store"
   });
   response.end(JSON.stringify(data));
+}
+
+function parseMultipartFormData(body, contentType) {
+  const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[1] ||
+    contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[2];
+  if (!boundary) {
+    const error = new Error("Le formulaire de photos est invalide.");
+    error.status = 400;
+    throw error;
+  }
+
+  const delimiter = Buffer.from(`--${boundary}`);
+  const parts = [];
+  let cursor = body.indexOf(delimiter);
+  while (cursor !== -1) {
+    cursor += delimiter.length;
+    if (body.slice(cursor, cursor + 2).toString() === "--") break;
+    if (body.slice(cursor, cursor + 2).toString() === "\r\n") cursor += 2;
+
+    const next = body.indexOf(delimiter, cursor);
+    if (next === -1) break;
+    let part = body.slice(cursor, next);
+    if (part.slice(-2).toString() === "\r\n") part = part.slice(0, -2);
+
+    const headerEnd = part.indexOf(Buffer.from("\r\n\r\n"));
+    if (headerEnd !== -1) {
+      const rawHeaders = part.slice(0, headerEnd).toString("utf8");
+      const data = part.slice(headerEnd + 4);
+      const disposition = rawHeaders.match(/content-disposition:\s*([^\r\n]+)/i)?.[1] || "";
+      const name = disposition.match(/name="([^"]+)"/i)?.[1] || "";
+      const filename = disposition.match(/filename="([^"]*)"/i)?.[1] || "";
+      const partContentType = rawHeaders.match(/content-type:\s*([^\r\n]+)/i)?.[1]?.trim() || "";
+      if (name) parts.push({ name, filename, contentType: partContentType, data });
+    }
+    cursor = next;
+  }
+  return parts;
+}
+
+function isProbablyHeic(part) {
+  const filename = String(part.filename || "").toLowerCase();
+  const contentType = String(part.contentType || "").toLowerCase();
+  const brand = part.data.slice(4, 12).toString("latin1").toLowerCase();
+  return /\.(heic|heif)$/i.test(filename) ||
+    contentType.includes("heic") ||
+    contentType.includes("heif") ||
+    brand.startsWith("ftypheic") ||
+    brand.startsWith("ftypheix") ||
+    brand.startsWith("ftyphevc") ||
+    brand.startsWith("ftyphevx") ||
+    brand.startsWith("ftypmif1") ||
+    brand.startsWith("ftypmsf1");
+}
+
+function jpegFilename(filename) {
+  const base = String(filename || "photo-plante").replace(/\.[^.]+$/, "") || "photo-plante";
+  return `${base}.jpg`;
+}
+
+async function convertHeicPart(part) {
+  if (!isProbablyHeic(part)) return part;
+  try {
+    const output = await heicConvert({
+      buffer: part.data,
+      format: "JPEG",
+      quality: 0.88
+    });
+    return {
+      ...part,
+      filename: jpegFilename(part.filename),
+      contentType: "image/jpeg",
+      data: Buffer.from(output)
+    };
+  } catch {
+    const error = new Error("Cette photo HEIC n’a pas pu être convertie. Dans les réglages de l’appareil photo, choisis le format le plus compatible puis reprends la photo.");
+    error.status = 415;
+    throw error;
+  }
+}
+
+async function preparePlantNetFormData(body, contentType) {
+  const parts = parseMultipartFormData(body, contentType);
+  const formData = new FormData();
+  for (const part of parts) {
+    if (part.filename) {
+      const converted = await convertHeicPart(part);
+      formData.append(
+        converted.name,
+        new Blob([converted.data], { type: converted.contentType || "application/octet-stream" }),
+        converted.filename || "photo-plante.jpg"
+      );
+    } else {
+      formData.append(part.name, part.data.toString("utf8"));
+    }
+  }
+  return formData;
 }
 
 // --- Nominatim : cache mémoire + sérialisation à >= 1 req/s (politique d'usage) ---
@@ -295,6 +392,7 @@ async function identifyPlant(request, response, requestUrl) {
 
   try {
     const body = await readBody(request);
+    const plantNetFormData = await preparePlantNetFormData(body, contentType);
     const project = requestUrl.searchParams.get("project") || "all";
     const upstreamUrl = new URL(
       `https://my-api.plantnet.org/v2/identify/${encodeURIComponent(project)}`
@@ -307,8 +405,7 @@ async function identifyPlant(request, response, requestUrl) {
 
     const upstream = await fetch(upstreamUrl, {
       method: "POST",
-      headers: { "Content-Type": contentType },
-      body
+      body: plantNetFormData
     });
 
     const raw = await upstream.text();

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "grimoire-v0.3.0-pwa-16";
+const CACHE_VERSION = "grimoire-v0.3.0-pwa-17";
 const APP_SHELL = [
   "/",
   "/le_grimoire.html",

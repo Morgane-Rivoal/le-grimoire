@@ -108,7 +108,15 @@ function convertImageToJpeg(file){
 }
 
 async function prepareImageForPlantNet(file){
-  return convertImageToJpeg(file);
+  try{
+    return await convertImageToJpeg(file);
+  } catch(error){
+    if(isAcceptedImage(file)){
+      file.grimoireServerSidePhoto = true;
+      return file;
+    }
+    throw error;
+  }
 }
 
 function resultImage(result){
@@ -227,7 +235,7 @@ async function observePlant(event){
 
   try{
     const preparedFiles = await Promise.all(files.map(prepareImageForPlantNet));
-    currentObservationBlob = preparedFiles[0] || null;
+    currentObservationBlob = preparedFiles.find(file => !file.grimoireServerSidePhoto) || null;
     preparedFiles.forEach(file => {
       formData.append("images", file, file.name);
       formData.append("organs", "auto");
