@@ -119,11 +119,11 @@
       <div class="photo-actions">
         <label class="photo-picker">
           <span data-i18n="identify.pickGallery">Galerie</span>
-          <input id="plantPhotos" type="file" accept="image/jpeg,image/png,image/webp,.webp" multiple onchange="previewPhotos('plantPhotos')">
+          <input id="plantPhotos" type="file" accept="image/*,.heic,.heif" multiple onchange="previewPhotos('plantPhotos')">
         </label>
         <label class="photo-picker">
           <span data-i18n="identify.pickCamera">Appareil photo</span>
-          <input id="plantCamera" type="file" accept="image/jpeg,image/png,image/webp,.webp" capture="environment" onchange="previewPhotos('plantCamera')">
+          <input id="plantCamera" type="file" accept="image/*,.heic,.heif" capture="environment" onchange="previewPhotos('plantCamera')">
         </label>
       </div>
       <div id="photoPreviews" class="photo-previews"></div>
@@ -193,6 +193,20 @@
     </div>
     <div id="collectionGrid" class="grid"></div>
     <p id="emptyHerbier" class="small-note" data-i18n="herbarium.empty"></p>
+    <button class="secondary map-entry" onclick="go('carte')" data-i18n="map.open">Voir ma carte d’exploration</button>
+  </div>
+</section>
+
+<section id="carte" class="screen">
+  <div class="page">
+    <div class="topbar">
+      <button class="back" onclick="go('herbier')">‹</button>
+      <div><p class="kicker" data-i18n="map.kicker">Carnet de terrain</p><h2 data-i18n="map.title">Carte d’exploration</h2></div>
+      <span></span>
+    </div>
+    <p data-i18n="map.help">Les plantes géolocalisées apparaissent ici. Touchez un repère pour ouvrir sa fiche.</p>
+    <div id="explorationMap" class="exploration-map" role="region" aria-label="Carte des observations"></div>
+    <p id="mapEmpty" class="small-note hidden" data-i18n="map.empty">Aucune observation géolocalisée pour le moment.</p>
   </div>
 </section>
 

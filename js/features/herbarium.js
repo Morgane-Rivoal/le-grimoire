@@ -149,3 +149,43 @@ function renderCollection(){
   });
   grid.appendChild(fragment);
 }
+
+async function renderExplorationMap(){
+  const map = document.getElementById("explorationMap");
+  const empty = document.getElementById("mapEmpty");
+  if(!map) return;
+  map.innerHTML = "";
+  const entries = Object.entries(collection).filter(([, entry]) =>
+    Number.isFinite(entry?.lat) && Number.isFinite(entry?.lon)
+  );
+  empty?.classList.toggle("hidden", entries.length > 0);
+  if(!entries.length) return;
+
+  const lats = entries.map(([, entry]) => entry.lat);
+  const lons = entries.map(([, entry]) => entry.lon);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+
+  for(const [id, entry] of entries){
+    const marker = document.createElement("button");
+    marker.className = "map-marker";
+    marker.style.left = `${12 + ((entry.lon - minLon) / (maxLon - minLon || 1)) * 76}%`;
+    marker.style.top = `${12 + (1 - (entry.lat - minLat) / (maxLat - minLat || 1)) * 76}%`;
+    marker.title = `${herbariumEntryName(id, entry) || t("status.observation")} — ${entry.place || t("plant.placeMissing")}`;
+    marker.innerHTML = "<span>🌿</span>";
+    marker.onclick = () => entry.type === "identification" ? openIdentifiedPlant(id) : openPlant(id);
+    map.appendChild(marker);
+
+    if(entry.type === "identification"){
+      try{
+        const blob = await getObservationPhoto(id);
+        if(blob){
+          const url = URL.createObjectURL(blob);
+          marker.innerHTML = `<img src="${url}" alt="">`;
+        }
+      } catch{}
+    }
+  }
+}

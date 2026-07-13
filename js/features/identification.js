@@ -4,7 +4,9 @@ let selectedPlantFiles = [];
 let currentPredictedOrgans = [];
 let currentReliableIdentifications = [];
 let currentObservationBlob = null;
-const acceptedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+const acceptedImageExtensions = new Set([
+  "jpg", "jpeg", "png", "webp", "heic", "heif", "avif", "bmp"
+]);
 const minimumPlantNetScore = 0.2;
 
 function showIdentifyError(message){
@@ -64,7 +66,11 @@ function fileExtension(name){
 }
 
 function isAcceptedImage(file){
-  return acceptedImageTypes.includes(file.type) || fileExtension(file.name) === "webp";
+  const mimeType = String(file?.type || "").toLowerCase();
+  const extension = fileExtension(file?.name);
+  if(mimeType.startsWith("image/")) return true;
+  if(acceptedImageExtensions.has(extension)) return true;
+  return !mimeType && !extension && Number(file?.size || 0) > 0;
 }
 
 function convertImageToJpeg(file){
@@ -240,6 +246,12 @@ async function observePlant(event){
     resetPhotoSelection();
     go("result");
   } catch(error){
+    if((!navigator.onLine || error instanceof TypeError) && typeof queueObservation === "function"){
+      await queueObservation();
+      go("identifier");
+      showToast(t("queue.queuedOffline"), 5200);
+      return;
+    }
     go("identifier");
     showIdentifyError(
       location.protocol === "file:"
