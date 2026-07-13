@@ -45,6 +45,15 @@ function sendJson(response, status, data) {
   response.end(JSON.stringify(data));
 }
 
+function sendBinary(response, status, data, contentType) {
+  response.writeHead(status, {
+    "Content-Type": contentType || "application/octet-stream",
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff"
+  });
+  response.end(data);
+}
+
 function parseMultipartFormData(body, contentType) {
   const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[1] ||
     contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[2];
@@ -139,6 +148,31 @@ async function preparePlantNetFormData(body, contentType) {
     }
   }
   return formData;
+}
+
+async function previewPhoto(request, response) {
+  const contentType = request.headers["content-type"] || "";
+  if (!contentType.startsWith("multipart/form-data")) {
+    return sendJson(response, 400, { error: "Le formulaire de photo est invalide." });
+  }
+
+  try {
+    const body = await readBody(request);
+    const parts = parseMultipartFormData(body, contentType);
+    const photo = parts.find(part => part.filename);
+    if (!photo) return sendJson(response, 400, { error: "Aucune photo reçue." });
+
+    const prepared = await convertHeicPart(photo);
+    const outputType = prepared.contentType || "image/jpeg";
+    if (!String(outputType).toLowerCase().startsWith("image/")) {
+      return sendJson(response, 415, { error: "Ce fichier n’est pas reconnu comme une photo." });
+    }
+    return sendBinary(response, 200, prepared.data, outputType);
+  } catch (error) {
+    return sendJson(response, error.status || 415, {
+      error: error.message || "Cette photo n’a pas pu être préparée."
+    });
+  }
 }
 
 // --- Nominatim : cache mémoire + sérialisation à >= 1 req/s (politique d'usage) ---
@@ -489,6 +523,9 @@ const server = http.createServer(async (request, response) => {
 
   if (request.method === "POST" && requestUrl.pathname === "/api/identify") {
     return identifyPlant(request, response, requestUrl);
+  }
+  if (request.method === "POST" && requestUrl.pathname === "/api/photo-preview") {
+    return previewPhoto(request, response);
   }
   if (request.method === "GET" && requestUrl.pathname === "/health") {
     return sendJson(response, 200, { status: "ok" });

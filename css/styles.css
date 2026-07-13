@@ -1112,6 +1112,22 @@ textarea{
   object-fit:cover;
 }
 
+.photo-preview.loading::after,
+.photo-preview.unreadable::after{
+  content:attr(data-label);
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  padding:12px;
+  text-align:center;
+  color:#735727;
+  background:rgba(255,248,229,.88);
+  font-size:.82rem;
+  font-weight:900;
+  line-height:1.25;
+}
+
 .identification-list{
   display:grid;
   gap:12px;

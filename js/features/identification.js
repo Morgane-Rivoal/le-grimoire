@@ -55,9 +55,38 @@ function previewPhotos(inputId = "plantPhotos"){
     const image = document.createElement("img");
     image.src = url;
     image.alt = t("photo.selectedAlt");
+    image.onerror = () => loadServerPhotoPreview(file, image, card);
     card.appendChild(image);
     preview.appendChild(card);
   });
+}
+
+async function loadServerPhotoPreview(file, image, card){
+  if(!navigator.onLine || file.grimoirePreviewLoading) return;
+  file.grimoirePreviewLoading = true;
+  card.classList.add("loading");
+  card.dataset.label = t("photo.previewPreparing");
+  try{
+    const formData = new FormData();
+    formData.append("image", file, file.name || "photo-plante");
+    const response = await fetch("/api/photo-preview", {method:"POST", body:formData});
+    if(!response.ok) throw new Error("preview failed");
+    const blob = await response.blob();
+    if(!selectedPlantFiles.includes(file)) return;
+    file.grimoirePreviewBlob = blob;
+    const previewUrl = URL.createObjectURL(blob);
+    previewUrls.push(previewUrl);
+    image.onerror = null;
+    image.src = previewUrl;
+    card.classList.remove("loading");
+    delete card.dataset.label;
+  } catch{
+    card.classList.remove("loading");
+    card.classList.add("unreadable");
+    card.dataset.label = t("photo.previewUnavailable");
+  } finally {
+    file.grimoirePreviewLoading = false;
+  }
 }
 
 function fileExtension(name){
@@ -111,6 +140,10 @@ async function prepareImageForPlantNet(file){
   try{
     return await convertImageToJpeg(file);
   } catch(error){
+    if(file.grimoirePreviewBlob){
+      const baseName = String(file.name || "photo-plante").replace(/\.[^.]+$/, "") || "photo-plante";
+      return new File([file.grimoirePreviewBlob], `${baseName}.jpg`, {type:"image/jpeg"});
+    }
     if(isAcceptedImage(file)){
       file.grimoireServerSidePhoto = true;
       return file;
