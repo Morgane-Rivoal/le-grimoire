@@ -210,6 +210,48 @@ body::after{
   min-height:38px;
 }
 
+.offline-trail-banner{
+  position:fixed;
+  left:50%;
+  top:calc(max(12px,env(safe-area-inset-top)) + 62px);
+  transform:translateX(-50%);
+  z-index:44;
+  width:min(470px,calc(100% - 24px));
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:10px;
+  border:1px solid rgba(214,186,112,.65);
+  border-radius:18px;
+  padding:10px 12px;
+  color:var(--forest);
+  background:linear-gradient(135deg,rgba(255,248,229,.97),rgba(214,186,112,.96));
+  box-shadow:0 16px 38px rgba(0,0,0,.28);
+  font-weight:900;
+  line-height:1.25;
+  animation:toastIn .28s ease both;
+}
+
+.offline-trail-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:var(--red);
+  box-shadow:0 0 0 5px rgba(122,46,46,.13);
+}
+
+.offline-trail-banner button{
+  border:0;
+  border-radius:999px;
+  padding:8px 12px;
+  color:var(--cream);
+  background:var(--forest);
+  font-family:inherit;
+  font-weight:900;
+  cursor:pointer;
+  min-height:38px;
+}
+
 .centered-action{
   text-align:center;
   margin-top:22px;
@@ -1444,6 +1486,12 @@ textarea{
   min-width:88px;
 }
 
+.hiking-row button{
+  width:auto;
+  min-width:112px;
+  white-space:nowrap;
+}
+
 .bookmark-nav{
   position:fixed;
   left:50%;
@@ -1851,6 +1899,15 @@ textarea{
   .settings-row{
     grid-template-columns:1fr;
   }
+
+  .offline-trail-banner{
+    grid-template-columns:auto 1fr;
+  }
+
+  .offline-trail-banner button{
+    grid-column:1 / -1;
+    width:100%;
+  }
 }
 
 @media(min-width:760px){
@@ -1869,6 +1926,7 @@ textarea{
   .bookmark-nav,
   .grimoire-toast,
   .update-banner,
+  .offline-trail-banner,
   .onboarding,
   .topbar-actions,
   .note-form,

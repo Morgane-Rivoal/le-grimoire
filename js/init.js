@@ -8,4 +8,5 @@ translateDocument();
 renderPlants();
 renderCollection();
 if(typeof refreshQueuePanel === "function") refreshQueuePanel();
+if(typeof updateOfflineModeUI === "function") updateOfflineModeUI();
 if(typeof maybeStartOnboarding === "function") maybeStartOnboarding();

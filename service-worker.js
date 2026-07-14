@@ -1,4 +1,4 @@
-const CACHE_VERSION = "grimoire-v0.3.0-pwa-21";
+const CACHE_VERSION = "grimoire-v0.3.0-pwa-22";
 const APP_SHELL = [
   "/",
   "/le_grimoire.html",
@@ -30,6 +30,7 @@ const APP_SHELL = [
   "/js/features/dashboard.js",
   "/js/features/onboarding.js",
   "/js/features/offline-queue.js",
+  "/js/features/offline-mode.js",
   "/js/init.js",
   "/js/pwa.js",
   "/assets/icons/icon-192.png",
@@ -55,7 +56,9 @@ self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
-        keys.filter(key => key !== CACHE_VERSION).map(key => caches.delete(key))
+        keys
+          .filter(key => key !== CACHE_VERSION && !key.startsWith("grimoire-hike-pack"))
+          .map(key => caches.delete(key))
       ))
       .then(() => self.clients.claim())
   );

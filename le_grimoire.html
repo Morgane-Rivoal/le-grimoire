@@ -37,6 +37,12 @@
   </span>
 </div>
 
+<div id="offlineTrailBanner" class="offline-trail-banner hidden" role="status" aria-live="polite">
+  <span class="offline-trail-dot" aria-hidden="true"></span>
+  <span data-i18n="offline.banner">Mode randonnée : le réseau est absent, tes observations seront gardées pour plus tard.</span>
+  <button type="button" onclick="go('identifier')" data-i18n="offline.addObservation">Observer</button>
+</div>
+
 <section id="cover" class="screen active">
   <div class="cover">
     <div class="cover-inner">
@@ -258,6 +264,13 @@
         </span>
         <span class="settings-version" data-i18n="app.version">v0.3.0-alpha</span>
       </div>
+      <div class="settings-row hiking-row">
+        <span>
+          <strong data-i18n="offline.title">Mode randonnée</strong>
+          <small id="offlineStatusText" data-i18n="offline.statusUnknown">Vérification du mode hors ligne…</small>
+        </span>
+        <button id="prepareOfflineButton" class="secondary" type="button" onclick="prepareHikingOfflinePack()" data-i18n="offline.prepare">Préparer</button>
+      </div>
     </div>
   </div>
 </section>
@@ -297,6 +310,7 @@
 <script src="js/features/dashboard.js" charset="UTF-8"></script>
 <script src="js/features/onboarding.js" charset="UTF-8"></script>
 <script src="js/features/offline-queue.js" charset="UTF-8"></script>
+<script src="js/features/offline-mode.js" charset="UTF-8"></script>
 <script src="js/init.js" charset="UTF-8"></script>
 <script src="js/pwa.js" charset="UTF-8"></script>
 </body>

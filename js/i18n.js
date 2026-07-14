@@ -35,6 +35,19 @@ const translations = {
     "pwa.updateAvailable": "Une nouvelle version du Grimoire est disponible.",
     "pwa.updateNow": "Recharger",
     "pwa.updateDismiss": "Ignorer",
+    "offline.banner": "Mode randonnée : le réseau est absent, tes observations seront gardées pour plus tard.",
+    "offline.addObservation": "Observer",
+    "offline.title": "Mode randonnée",
+    "offline.statusUnknown": "Prépare l’app avant de partir : fiches, herbier et file d’attente resteront accessibles sans réseau.",
+    "offline.ready": "Prêt pour la randonnée depuis le {date}. Les observations seront gardées si le réseau disparaît.",
+    "offline.preparing": "Le Grimoire prépare ses pages pour le sentier…",
+    "offline.prepare": "Préparer",
+    "offline.prepared": "Mode randonnée prêt : tu peux partir observer.",
+    "offline.prepareFailed": "Préparation incomplète. Ouvre l’app avec du réseau puis réessaie.",
+    "offline.unsupported": "Ce navigateur ne permet pas encore la préparation hors ligne.",
+    "offline.nowOffline": "Mode randonnée actif : les observations seront gardées pour plus tard.",
+    "offline.backOnline": "Connexion retrouvée : les observations en attente peuvent être traitées.",
+    "offline.identifyOffline": "Garder pour le retour du réseau",
     "explore.kicker": "Bibliothèque des plantes",
     "explore.search": "Rechercher une plante...",
     "filter.all": "Toutes",
@@ -274,6 +287,7 @@ const translations = {
     "menu.kicker": "Several paths await you", "menu.title": "Contents", "nav.explore": "Explore", "nav.identify": "Identify", "nav.herbarium": "Herbarium", "nav.settings": "Settings", "nav.home": "Home", "nav.map": "Map",
     "menu.explore.description": "Discover plants and their botanical pages.", "menu.identify.description": "Observe a plant through the Botanist’s lens.",
     "menu.herbarium.title": "My Herbarium", "menu.herbarium.description": "Your discoveries, notes and observations.", "menu.map.description": "Your geolocated discoveries on an interactive map.", "menu.version": "Alpha version 0.3.0 — local prototype.", "settings.version": "App version", "pwa.install": "Install The Grimoire", "pwa.updateAvailable": "A new version of the Grimoire is available.", "pwa.updateNow": "Reload", "pwa.updateDismiss": "Dismiss",
+    "offline.banner": "Hiking mode: the network is unavailable, your observations will be kept for later.", "offline.addObservation": "Observe", "offline.title": "Hiking mode", "offline.statusUnknown": "Prepare the app before leaving: pages, herbarium and the waiting queue will remain available offline.", "offline.ready": "Ready for hiking since {date}. Observations will be kept if the network disappears.", "offline.preparing": "The Grimoire is preparing its pages for the trail…", "offline.prepare": "Prepare", "offline.prepared": "Hiking mode ready: you can go observe.", "offline.prepareFailed": "Preparation incomplete. Open the app with network access and try again.", "offline.unsupported": "This browser does not support offline preparation yet.", "offline.nowOffline": "Hiking mode active: observations will be kept for later.", "offline.backOnline": "Connection restored: waiting observations can be processed.", "offline.identifyOffline": "Keep until network returns",
     "explore.kicker": "Plant library", "explore.search": "Search for a plant...", "filter.all": "All", "filter.edible": "Edible", "filter.caution": "Caution", "filter.aromatic": "Aromatic", "filter.medicinal": "Medicinal", "filter.bloomingNow": "Blooming this month",
     "onboarding.skip": "Skip", "onboarding.next": "Next", "onboarding.start": "Get started",
     "onboarding.welcome.title": "Welcome to the Grimoire", "onboarding.welcome.text": "Your digital herbarium to observe, identify and understand the plants around you.",
@@ -408,4 +422,5 @@ function setLocale(locale){
   if(typeof renderPlants === "function") renderPlants();
   if(typeof renderCollection === "function") renderCollection();
   if(typeof refreshCurrentPlantView === "function") refreshCurrentPlantView();
+  if(typeof updateOfflineModeUI === "function") updateOfflineModeUI();
 }

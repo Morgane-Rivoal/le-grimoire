@@ -26,3 +26,7 @@ Le serveur Node.js doit être déployé avec :
 Lorsqu’une ressource précachée change, modifier la valeur `CACHE_VERSION` dans `service-worker.js`. À l’activation, le nouveau service worker supprime les anciens caches.
 
 Les requêtes `POST /api/identify` et les images externes ne sont jamais mises en cache par le service worker.
+
+## Mode randonnée
+
+Le panneau **Réglages > Mode randonnée** prépare les ressources essentielles dans le cache du navigateur avant une sortie. Hors ligne, l'utilisateur peut ouvrir l'application, consulter les fiches déjà intégrées, accéder à son herbier local et enregistrer des observations photo dans la file d'attente. L'identification Pl@ntNet nécessite toujours le retour du réseau.
