@@ -1028,6 +1028,54 @@ textarea{
   font-size:.82rem;
 }
 
+.observation-hero{
+  margin:4px 0 18px;
+  border-radius:22px;
+  overflow:hidden;
+  border:1px solid rgba(184,146,74,.45);
+  background:linear-gradient(145deg,rgba(255,248,229,.72),rgba(221,201,148,.34));
+  box-shadow:0 14px 30px rgba(32,45,35,.12);
+}
+
+.observation-hero .observation-photo{
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+
+.observation-hero .observation-photo img{
+  width:100%;
+  max-height:360px;
+  object-fit:cover;
+}
+
+.observation-hero.pending-photo{
+  min-height:160px;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  color:var(--muted);
+  font-weight:900;
+  text-align:center;
+}
+
+.observation-origin{
+  margin:-6px 0 14px;
+  color:var(--muted);
+  font-style:italic;
+}
+
+.observation-comparison{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.observation-comparison .observation-photo img{
+  aspect-ratio:1;
+  object-fit:cover;
+}
+
 .gallery{
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -1302,6 +1350,49 @@ textarea{
   text-align:left;
 }
 
+.result-observation-summary{
+  display:grid;
+  grid-template-columns:116px 1fr;
+  gap:14px;
+  align-items:center;
+  border:1px solid rgba(184,146,74,.45);
+  border-radius:20px;
+  padding:12px;
+  background:linear-gradient(145deg,rgba(255,248,229,.72),rgba(239,226,191,.38));
+  box-shadow:0 10px 22px rgba(32,45,35,.09);
+}
+
+.result-user-photo,
+.result-reference{
+  position:relative;
+  overflow:hidden;
+  border-radius:15px;
+  border:1px solid rgba(184,146,74,.36);
+  background:var(--parchment-light);
+}
+
+.result-user-photo img,
+.result-reference img{
+  display:block;
+  width:100%;
+  aspect-ratio:1;
+  object-fit:cover;
+}
+
+.result-user-photo span,
+.result-reference span{
+  display:block;
+  padding:6px 8px;
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:900;
+}
+
+.result-reference{
+  width:min(132px,100%);
+  margin:8px 0;
+}
+
 .identification-choice{
   display:grid;
   grid-template-columns:76px 1fr;
@@ -1368,6 +1459,11 @@ textarea{
   color:#38523b;
   font-weight:900;
   margin:5px 0 0;
+}
+
+.verify-note{
+  color:var(--red);
+  font-weight:900;
 }
 
 .result-facts{
@@ -2015,6 +2111,16 @@ textarea{
 
   .photo-previews{
     grid-template-columns:repeat(2,1fr);
+  }
+
+  .result-observation-summary,
+  .observation-comparison{
+    grid-template-columns:1fr;
+  }
+
+  .result-user-photo{
+    max-width:220px;
+    margin:0 auto;
   }
 
   .photo-actions{

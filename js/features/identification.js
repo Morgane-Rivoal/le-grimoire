@@ -4,10 +4,12 @@ let selectedPlantFiles = [];
 let currentPredictedOrgans = [];
 let currentReliableIdentifications = [];
 let currentObservationBlob = null;
+let currentResultObservationUrl = null;
 const acceptedImageExtensions = new Set([
   "jpg", "jpeg", "png", "webp", "heic", "heif", "avif", "bmp"
 ]);
 const minimumPlantNetScore = 0.2;
+const verificationScoreThreshold = 0.5;
 
 function showIdentifyError(message){
   const errorBox = document.getElementById("identifyError");
@@ -201,9 +203,11 @@ function findLocalPlant(species){
 function renderIdentificationResults(results){
   const mount = document.getElementById("identificationResults");
   mount.innerHTML = "";
-  const reliableResults = results
-    .filter(result => Number(result.score) >= minimumPlantNetScore)
-    .slice(0,3);
+  if(currentResultObservationUrl){
+    URL.revokeObjectURL(currentResultObservationUrl);
+    currentResultObservationUrl = null;
+  }
+  const reliableResults = results.slice(0,3);
   currentReliableIdentifications = reliableResults;
 
   if(!reliableResults.length){
@@ -219,13 +223,32 @@ function renderIdentificationResults(results){
     return;
   }
 
+  if(currentObservationBlob){
+    currentResultObservationUrl = URL.createObjectURL(currentObservationBlob);
+    mount.insertAdjacentHTML("beforeend", `
+      <article class="result-observation-summary">
+        <div class="result-user-photo">
+          <img src="${currentResultObservationUrl}" alt="${safeText(t("photo.yours"))}">
+          <span>${safeText(t("photo.yours"))}</span>
+        </div>
+        <div>
+          <span class="badge">${safeText(t("result.observationPhoto"))}</span>
+          <h3>${safeText(t("result.chooseBest"))}</h3>
+          <p>${safeText(t("result.compareHelp"))}</p>
+        </div>
+      </article>
+    `);
+  }
+
   reliableResults.forEach((result, index) => {
     const species = result.species || {};
     const commonName = species.commonNames?.[0] || t("result.frenchUnavailable");
     const scientificName = species.scientificName || species.scientificNameWithoutAuthor || t("result.unknownSpecies");
     const family = species.family?.scientificNameWithoutAuthor || species.family?.scientificName || "";
     const score = Math.round((Number(result.score) || 0) * 100);
+    const needsVerification = Number(result.score) < verificationScoreThreshold;
     const localPlant = findLocalPlant(species);
+    const referenceImage = resultImage(result) || result.enrichment?.imageUrl || "";
     const visualEntry = {
       name: commonName,
       latin: scientificName,
@@ -247,10 +270,17 @@ function renderIdentificationResults(results){
       <div class="identification-plate">${plantPlateMarkup(visualEntry)}</div>
       <div>
         <span class="badge">${t("result.proposal", {number: index + 1})}</span>
+        ${needsVerification ? `<span class="badge red">${t("result.verify")}</span>` : ""}
         <h3>${safeText(commonName)}</h3>
         <p class="latin">${safeText(scientificName)}</p>
         ${family ? `<p class="small-note">${safeText(family)}</p>` : ""}
         <p class="score">${t("result.confidence", {score})}</p>
+        ${referenceImage ? `
+          <div class="result-reference">
+            <img src="${safeText(referenceImage)}" alt="${safeText(t("photo.reference"))}">
+            <span>${safeText(t("photo.reference"))}</span>
+          </div>
+        ` : ""}
         ${resultHeight || resultFlowering ? `
           <div class="result-facts">
             ${resultHeight ? `<span><strong>${t("field.height")}</strong>${safeText(resultHeight)}</span>` : ""}
@@ -259,6 +289,7 @@ function renderIdentificationResults(results){
         ` : ""}
         <p class="small-note">${safeText(profile.summary)}</p>
         <p class="small-note"><strong>${t("result.remember")}</strong> ${safeText(profile.edibility)}</p>
+        ${needsVerification ? `<p class="small-note verify-note">${safeText(t("result.verifyHelp"))}</p>` : ""}
         <button class="danger" onclick="saveIdentifiedPlant(${index})">${t("result.save")}</button>
         <details class="correction-panel">
           <summary>${t("result.correctBeforeSave")}</summary>
@@ -303,7 +334,7 @@ async function observePlant(event){
 
   try{
     const preparedFiles = await Promise.all(files.map(prepareImageForPlantNet));
-    currentObservationBlob = preparedFiles.find(file => !file.grimoireServerSidePhoto) || null;
+    currentObservationBlob = preparedFiles[0] || files[0] || null;
     preparedFiles.forEach(file => {
       formData.append("images", file, file.name);
       formData.append("organs", "auto");
@@ -345,6 +376,7 @@ function speciesFromResult(result){
     shortLatin: species.scientificNameWithoutAuthor || species.scientificName || "",
     family: species.family?.scientificNameWithoutAuthor || species.family?.scientificName || "Famille non disponible",
     score: Math.round((Number(result?.score) || 0) * 100),
+    needsVerification: Number(result?.score || 0) < verificationScoreThreshold,
     imageUrl: resultImage(result) || result?.enrichment?.imageUrl || "",
     enrichment: result?.enrichment || null,
     gbifId: result?.gbif?.id || "",
@@ -399,6 +431,7 @@ async function saveIdentifiedPlant(index, useCorrection = false){
     shortLatin: entry.shortLatin,
     family: entry.family,
     score: entry.score,
+    needsVerification: entry.needsVerification,
     imageUrl: entry.imageUrl,
     enrichment: entry.enrichment,
     gbifId: entry.gbifId,
@@ -420,6 +453,9 @@ async function saveIdentifiedPlant(index, useCorrection = false){
     note: "",
     createdAt: new Date().toISOString(),
     source: "Pl@ntNet",
+    observedAt: new Date().toISOString(),
+    identifiedAt: new Date().toISOString(),
+    origin: t("plant.photoOrigin", {date:new Date().toLocaleDateString(currentLocale === "en" ? "en" : "fr-FR")}),
     knowledgeSource: profile.source
   };
 

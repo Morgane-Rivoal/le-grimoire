@@ -332,6 +332,10 @@ function openIdentifiedPlant(id){
     botanicalNote: botanicalNoteFor(entry, computedProfile, displayPlant),
     source: computedProfile.source
   };
+  const needsVerification = entry.needsVerification || Number(entry.score || 0) < 50;
+  const originText = entry.origin || t("plant.photoOrigin", {
+    date: entry.date || new Date(entry.createdAt || Date.now()).toLocaleDateString(currentLocale === "en" ? "en" : "fr-FR")
+  });
 
   mount.innerHTML = `
     <div class="topbar">
@@ -343,17 +347,24 @@ function openIdentifiedPlant(id){
       </div>
     </div>
 
-    <div class="plate">${plantPlateMarkup(entry)}</div>
+    <div id="observationHeroMount" class="observation-hero pending-photo"><p>${safeText(t("photo.loading"))}</p></div>
 
     <p class="kicker">${t("plant.savedObservation")}</p>
     <h2>${safeText(entry.name)}</h2>
     <p class="latin">${safeText(entry.latin)}</p>
+    <p class="observation-origin">${safeText(originText)}</p>
 
     <div class="badges">
       <span class="badge">Pl@ntNet</span>
+      <span class="badge ${needsVerification ? "red" : ""}">${safeText(needsVerification ? t("result.verify") : t("result.validated"))}</span>
+      <span class="badge">${t("plant.confidence", {score: entry.score || 0})}</span>
       <span class="badge ${profile.status === "toxique" || profile.status === "prudence" || profile.status === "inconnu" ? "red" : ""}">${safeText(profile.edibility)}</span>
       <span class="badge">${safeText(entry.family)}</span>
     </div>
+
+    ${needsVerification ? `<div class="warning">${safeText(t("result.verifyHelp"))}</div>` : ""}
+
+    <div class="plate">${plantPlateMarkup(entry)}</div>
 
     ${identityMarkup([
       {label:t("field.family"), value:entry.family},
@@ -431,7 +442,8 @@ async function refreshMissingEnrichment(id, entry){
 
 async function hydrateObservationPhoto(id, entry){
   const mount = document.getElementById("observationPhotoMount");
-  if(!mount) return;
+  const heroMount = document.getElementById("observationHeroMount");
+  if(!mount && !heroMount) return;
   if(activeObservationPhotoUrl){
     URL.revokeObjectURL(activeObservationPhotoUrl);
     activeObservationPhotoUrl = null;
@@ -443,9 +455,11 @@ async function hydrateObservationPhoto(id, entry){
       return;
     }
   } catch{}
-  mount.innerHTML = entry.imageUrl
+  const fallback = entry.imageUrl
     ? `<div class="observation-photo"><img src="${safeText(entry.imageUrl)}" alt="${safeText(t("photo.compareAlt", {name:entry.name}))}"><span>${t("photo.reference")}</span></div>`
     : `<p>${safeText(t("photo.none"))}</p>`;
+  if(mount) mount.innerHTML = fallback;
+  if(heroMount) heroMount.innerHTML = fallback;
 }
 
 async function repairStoredObservationPhoto(id, blob){
@@ -469,7 +483,8 @@ async function repairStoredObservationPhoto(id, blob){
 
 function mountIdentificationObservationBlob(id, blob, entry, allowRepair = true){
   const mount = document.getElementById("observationPhotoMount");
-  if(!mount) return;
+  const heroMount = document.getElementById("observationHeroMount");
+  if(!mount && !heroMount) return;
   if(activeObservationPhotoUrl){
     URL.revokeObjectURL(activeObservationPhotoUrl);
   }
@@ -477,20 +492,34 @@ function mountIdentificationObservationBlob(id, blob, entry, allowRepair = true)
   const fallbackHtml = entry.imageUrl
     ? `<div class="observation-photo"><img src="${safeText(entry.imageUrl)}" alt="${safeText(t("photo.compareAlt", {name:entry.name}))}"><span>${t("photo.reference")}</span></div>`
     : `<p>${safeText(t("photo.none"))}</p>`;
-  mount.innerHTML = `<div class="observation-photo"><img src="${activeObservationPhotoUrl}" alt="${safeText(t("photo.observationAlt", {name:entry.name}))}"><span>${t("photo.yours")}</span></div>`;
-  const image = mount.querySelector("img");
+  const userPhotoHtml = `<div class="observation-photo"><img src="${activeObservationPhotoUrl}" alt="${safeText(t("photo.observationAlt", {name:entry.name}))}"><span>${t("photo.yours")}</span></div>`;
+  const comparisonHtml = `
+    <div class="observation-comparison">
+      ${userPhotoHtml}
+      ${entry.imageUrl ? `<div class="observation-photo reference-photo"><img src="${safeText(entry.imageUrl)}" alt="${safeText(t("photo.compareAlt", {name:entry.name}))}"><span>${t("photo.reference")}</span></div>` : ""}
+    </div>
+  `;
+  if(heroMount){
+    heroMount.classList.remove("pending-photo");
+    heroMount.innerHTML = userPhotoHtml;
+  }
+  if(mount) mount.innerHTML = comparisonHtml;
+  const image = (mount || heroMount).querySelector("img");
   if(!image) return;
   image.onerror = async () => {
     if(!allowRepair){
-      mount.innerHTML = fallbackHtml;
+      if(mount) mount.innerHTML = fallbackHtml;
+      if(heroMount) heroMount.innerHTML = fallbackHtml;
       return;
     }
-    mount.innerHTML = `<p>${safeText(t("photo.repairing"))}</p>`;
+    if(mount) mount.innerHTML = `<p>${safeText(t("photo.repairing"))}</p>`;
+    if(heroMount) heroMount.innerHTML = `<p>${safeText(t("photo.repairing"))}</p>`;
     const repaired = await repairStoredObservationPhoto(id, blob);
     if(repaired){
       mountIdentificationObservationBlob(id, repaired, entry, false);
     } else {
-      mount.innerHTML = fallbackHtml;
+      if(mount) mount.innerHTML = fallbackHtml;
+      if(heroMount) heroMount.innerHTML = fallbackHtml;
     }
   };
 }

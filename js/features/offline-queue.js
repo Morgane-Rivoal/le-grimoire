@@ -74,6 +74,7 @@ async function saveQueuedResult(result, meta){
     shortLatin: species.scientificNameWithoutAuthor || species.scientificName || "",
     family: species.family?.scientificNameWithoutAuthor || species.family?.scientificName || "",
     score: Math.round((Number(result.score) || 0) * 100),
+    needsVerification: Number(result.score || 0) < verificationScoreThreshold,
     imageUrl: resultImage(result) || result?.enrichment?.imageUrl || "",
     enrichment: result?.enrichment || null,
     flowering: result?.enrichment?.flowering || "",
@@ -91,6 +92,7 @@ async function saveQueuedResult(result, meta){
     shortLatin: entry.shortLatin,
     family: entry.family,
     score: entry.score,
+    needsVerification: entry.needsVerification,
     imageUrl: entry.imageUrl,
     enrichment: entry.enrichment,
     flowering: entry.flowering,
@@ -112,6 +114,9 @@ async function saveQueuedResult(result, meta){
     note: "",
     createdAt: new Date().toISOString(),
     source: t("queue.source"),
+    observedAt: itemDateOrNow(meta),
+    identifiedAt: new Date().toISOString(),
+    origin: t("plant.photoOrigin", {date:new Date(itemDateOrNow(meta)).toLocaleDateString(currentLocale === "en" ? "en" : "fr-FR")}),
     knowledgeSource: profile.source
   };
   saveCollection();
@@ -126,6 +131,10 @@ async function saveQueuedResult(result, meta){
     }
   }
   return id;
+}
+
+function itemDateOrNow(meta){
+  return meta?.createdAt || new Date().toISOString();
 }
 
 function queuedPhotoFilename(blob, index){
@@ -219,7 +228,8 @@ async function processQueue(){
         observationBlob: preparedBlobs[0] || blobs[0],
         lat: item.value.lat,
         lon: item.value.lon,
-        place
+        place,
+        createdAt: item.value.createdAt
       });
       await deleteQueueItem(item.key);
       processed++;
