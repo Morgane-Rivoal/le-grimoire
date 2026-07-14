@@ -1,5 +1,5 @@
-// Traitement différé des observations : mise en file, comptage et
-// identification par lot lorsque la connexion revient.
+// Traitement differe des observations : les photos prises sans reseau sont
+// conservees localement, puis envoyees a Pl@ntNet quand la connexion revient.
 function currentPositionOnce(){
   return new Promise(resolve => {
     if(!("geolocation" in navigator)){
@@ -128,6 +128,28 @@ async function saveQueuedResult(result, meta){
   return id;
 }
 
+function queuedPhotoFilename(blob, index){
+  const type = String(blob?.type || "").toLowerCase();
+  if(type.includes("png")) return `queue-${index}.png`;
+  if(type.includes("webp")) return `queue-${index}.webp`;
+  if(type.includes("heic")) return `queue-${index}.heic`;
+  if(type.includes("heif")) return `queue-${index}.heif`;
+  if(type.includes("avif")) return `queue-${index}.avif`;
+  return `queue-${index}.jpg`;
+}
+
+async function prepareQueuedPhotoForUpload(blob, index){
+  const fallbackName = queuedPhotoFilename(blob, index);
+  const file = blob instanceof File
+    ? blob
+    : new File([blob], fallbackName, {type: blob?.type || "application/octet-stream"});
+  try{
+    return await convertImageToJpeg(file);
+  } catch{
+    return new File([blob], file.name || fallbackName, {type: file.type || blob?.type || "application/octet-stream"});
+  }
+}
+
 async function processQueue(){
   if(!navigator.onLine){
     showToast(t("queue.offline"));
@@ -142,6 +164,9 @@ async function processQueue(){
   if(processButton) processButton.disabled = true;
 
   let processed = 0;
+  let failed = 0;
+  let lastError = "";
+
   for(const item of items){
     const blobs = Array.isArray(item.value?.blobs) ? item.value.blobs : [];
     if(!blobs.length){
@@ -149,27 +174,39 @@ async function processQueue(){
       continue;
     }
     try{
+      const preparedBlobs = await Promise.all(blobs.map(prepareQueuedPhotoForUpload));
       const formData = new FormData();
-      blobs.forEach((blob, index) => {
-        formData.append("images", blob, `queue-${index}.jpg`);
+      preparedBlobs.forEach((blob, index) => {
+        formData.append("images", blob, blob.name || queuedPhotoFilename(blob, index));
         formData.append("organs", "auto");
       });
+
       const response = await fetch(`/api/identify?lang=${encodeURIComponent(currentLocale)}`, {method:"POST", body:formData});
       const data = await response.json().catch(() => ({}));
-      if(!response.ok || !Array.isArray(data.results) || !data.results.length) break;
-
-      const best = data.results.find(result => Number(result.score) >= minimumPlantNetScore);
-      if(!best){
-        // Aucune espèce fiable : on retire l'élément pour éviter une file bloquée.
-        await deleteQueueItem(item.key);
+      if(!response.ok){
+        failed++;
+        lastError = data.error || t("error.identification");
         continue;
       }
+      if(!Array.isArray(data.results) || !data.results.length){
+        failed++;
+        lastError = t("error.noSpecies");
+        continue;
+      }
+
+      const best = data.results.find(result => Number(result.score) >= minimumPlantNetScore) || data.results[0];
+      if(!best){
+        failed++;
+        lastError = t("error.noSpecies");
+        continue;
+      }
+
       let place = item.value.place || "";
       if(!place && Number.isFinite(Number(item.value.lat))){
         place = await resolvePlaceName(item.value.lat, item.value.lon);
       }
       await saveQueuedResult(best, {
-        observationBlob: blobs[0],
+        observationBlob: preparedBlobs[0] || blobs[0],
         lat: item.value.lat,
         lon: item.value.lon,
         place
@@ -177,7 +214,8 @@ async function processQueue(){
       await deleteQueueItem(item.key);
       processed++;
     } catch{
-      break;
+      failed++;
+      lastError = t("queue.processFailed");
     }
   }
 
@@ -186,7 +224,14 @@ async function processQueue(){
   if(typeof renderCollection === "function") renderCollection();
   if(processed && typeof checkAchievements === "function") checkAchievements();
   await refreshQueuePanel();
-  showToast(processed ? t("queue.done", {count:processed}) : t("queue.noneProcessed"));
+
+  if(processed && failed){
+    showToast(t("queue.partial", {count:processed, failed}), 6200);
+  } else if(processed){
+    showToast(t("queue.done", {count:processed}));
+  } else {
+    showToast(lastError ? t("queue.failedDetail", {reason:lastError}) : t("queue.noneProcessed"), 7200);
+  }
 }
 
 window.addEventListener("online", refreshQueuePanel);
