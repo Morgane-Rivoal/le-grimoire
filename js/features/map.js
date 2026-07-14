@@ -6,7 +6,7 @@ let userLocationMarker = null;
 let mapFilter = "all";
 
 function setMapFilter(filter){
-  mapFilter = ["all", "comestible", "toxique", "medicinal", "verify"].includes(filter) ? filter : "all";
+  mapFilter = ["all", "edible", "toxic", "medicinal", "verified"].includes(filter) ? filter : "all";
   document.querySelectorAll(".map-filter-chip").forEach(chip =>
     chip.classList.toggle("active", chip.dataset.mapFilter === mapFilter)
   );
@@ -27,15 +27,16 @@ function mapEntryCategory(entry, plant, profile){
   const verify = entry?.type === "identification" && (entry.needsVerification || Number(entry.score || 0) < 50);
   const toxic = status === "toxique" || /toxique|toxic|ne pas consommer|do not consume/i.test(`${profile?.edibility || ""} ${entry?.edibility || ""}`);
   const edible = status === "comestible";
-  return {status, medicinal, verify, toxic, edible};
+  const verified = !verify && status !== "inconnu";
+  return {status, medicinal, verify, toxic, edible, verified};
 }
 
 function mapEntryMatchesFilter(item){
   if(mapFilter === "all") return true;
-  if(mapFilter === "comestible") return item.category.edible;
-  if(mapFilter === "toxique") return item.category.toxic || (!item.category.edible && item.category.status !== "comestible");
+  if(mapFilter === "edible") return item.category.edible;
+  if(mapFilter === "toxic") return item.category.toxic || item.category.status === "toxique";
   if(mapFilter === "medicinal") return item.category.medicinal;
-  if(mapFilter === "verify") return item.category.verify || item.category.status === "inconnu";
+  if(mapFilter === "verified") return item.category.verified;
   return true;
 }
 
@@ -159,14 +160,8 @@ function renderDiscoveryMap(){
     return;
   }
 
-  if(!entries.length){
-    empty.textContent = t("map.emptyFilter");
-    empty.style.display = "block";
-    container.style.display = "none";
-    return;
-  }
-
-  empty.style.display = "none";
+  empty.textContent = entries.length ? "" : t("map.emptyFilter");
+  empty.style.display = entries.length ? "none" : "block";
   container.style.display = "block";
 
   if(!discoveryMap){
@@ -198,6 +193,20 @@ function renderDiscoveryMap(){
   }
 
   discoveryMarkers.clearLayers();
+
+  if(!entries.length){
+    const savedView = loadMapView();
+    setTimeout(() => {
+      if(!discoveryMap) return;
+      discoveryMap.invalidateSize();
+      if(savedView){
+        discoveryMap.setView([savedView.lat, savedView.lon], savedView.zoom);
+      } else {
+        discoveryMap.setView([46.603354, 1.888334], 5);
+      }
+    }, 90);
+    return;
+  }
 
   // Plusieurs plantes peuvent partager le même lieu : on écarte légèrement en
   // cercle les marqueurs superposés pour qu'ils restent tous visibles/cliquables.

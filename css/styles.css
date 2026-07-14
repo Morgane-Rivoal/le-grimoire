@@ -1923,6 +1923,54 @@ textarea{
   padding:0;
 }
 
+.map-filter-chip{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+
+.map-filter-chip[data-map-filter="all"]{
+  border-color:rgba(111,140,100,.5);
+}
+
+.map-filter-chip[data-map-filter="edible"]{
+  border-color:rgba(96,133,76,.52);
+  background:rgba(224,238,197,.44);
+}
+
+.map-filter-chip[data-map-filter="medicinal"]{
+  border-color:rgba(75,126,82,.52);
+  background:rgba(215,234,204,.42);
+}
+
+.map-filter-chip[data-map-filter="toxic"]{
+  border-color:rgba(122,46,46,.52);
+  background:rgba(244,222,212,.42);
+}
+
+.map-filter-chip[data-map-filter="verified"]{
+  border-color:rgba(65,123,91,.52);
+  background:rgba(218,238,226,.42);
+}
+
+.map-filter-chip.active[data-map-filter="edible"]{
+  background:linear-gradient(135deg,#d7e8b5,#b9cf81);
+}
+
+.map-filter-chip.active[data-map-filter="medicinal"]{
+  background:linear-gradient(135deg,#cfe7c8,#91bc8d);
+}
+
+.map-filter-chip.active[data-map-filter="toxic"]{
+  background:linear-gradient(135deg,#e9c0aa,#b66a54);
+  color:#2f1e16;
+}
+
+.map-filter-chip.active[data-map-filter="verified"]{
+  background:linear-gradient(135deg,#d9efe0,#8bbd9d);
+}
+
 .map-summary{
   margin:10px 0 0;
   color:var(--muted);

@@ -213,11 +213,11 @@
     <p data-i18n="map.help">Les plantes géolocalisées apparaissent ici. Touchez un repère pour ouvrir sa fiche.</p>
     <div class="map-tools">
       <div class="chips map-filter-chips" role="group" aria-label="Filtres de la carte">
-        <button class="chip map-filter-chip active" data-map-filter="all" onclick="setMapFilter('all')" data-i18n="filter.all"></button>
-        <button class="chip map-filter-chip" data-map-filter="comestible" onclick="setMapFilter('comestible')" data-i18n="filter.edible"></button>
-        <button class="chip map-filter-chip" data-map-filter="toxique" onclick="setMapFilter('toxique')" data-i18n="map.filterToxic"></button>
-        <button class="chip map-filter-chip" data-map-filter="medicinal" onclick="setMapFilter('medicinal')" data-i18n="filter.medicinal"></button>
-        <button class="chip map-filter-chip" data-map-filter="verify" onclick="setMapFilter('verify')" data-i18n="map.filterVerify"></button>
+        <button class="chip map-filter-chip active" data-map-filter="all" onclick="setMapFilter('all')" data-i18n="map.filterAll">🌿 Toutes</button>
+        <button class="chip map-filter-chip" data-map-filter="edible" onclick="setMapFilter('edible')" data-i18n="map.filterEdible">🍽️ Comestibles</button>
+        <button class="chip map-filter-chip" data-map-filter="medicinal" onclick="setMapFilter('medicinal')" data-i18n="map.filterMedicinal">💊 Médicinales</button>
+        <button class="chip map-filter-chip" data-map-filter="toxic" onclick="setMapFilter('toxic')" data-i18n="map.filterToxic">☠️ Toxiques</button>
+        <button class="chip map-filter-chip" data-map-filter="verified" onclick="setMapFilter('verified')" data-i18n="map.filterVerified">✅ Vérifiées</button>
       </div>
       <p id="mapSummary" class="map-summary"></p>
     </div>
@@ -234,19 +234,6 @@
       <span></span>
     </div>
     <div id="dashboardMount"></div>
-  </div>
-</section>
-
-<section id="carte" class="screen">
-  <div class="page">
-    <div class="topbar">
-      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
-      <div><p class="kicker" data-i18n="map.kicker">Carnet géographique</p><h2 data-i18n="nav.map">Carte</h2></div>
-      <span></span>
-    </div>
-    <p data-i18n="map.intro">Retrouve tes découvertes géolocalisées et reviens à leur fiche d'un simple appui.</p>
-    <div id="discoveryMap" class="discovery-map"></div>
-    <p id="mapEmpty" class="small-note" data-i18n="map.empty">Aucune découverte géolocalisée pour l'instant. Ajoute un lieu à une plante de ton herbier pour la voir apparaître ici.</p>
   </div>
 </section>
 
