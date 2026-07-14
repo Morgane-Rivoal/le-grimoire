@@ -413,8 +413,36 @@ if(localStorage.getItem("grimoire-locale-migration") !== localeMigrationVersion)
 let currentLocale = localStorage.getItem("grimoire-locale") || "fr";
 if(!supportedLocales.includes(currentLocale)) currentLocale = "fr";
 
+const essentialTranslationFallbacks = {
+  fr: {
+    "map.kicker": "Carnet géographique",
+    "map.title": "Carte d’exploration",
+    "map.help": "Les plantes géolocalisées apparaissent ici. Touche un repère pour ouvrir sa fiche.",
+    "map.filterAll": "🌿 Toutes",
+    "map.filterEdible": "🍽️ Comestibles",
+    "map.filterMedicinal": "💊 Médicinales",
+    "map.filterToxic": "☠️ Toxiques",
+    "map.filterVerified": "✅ Vérifiées"
+  },
+  en: {
+    "map.kicker": "Geographic notebook",
+    "map.title": "Exploration map",
+    "map.help": "Geolocated plants appear here. Tap a marker to open its page.",
+    "map.filterAll": "🌿 All",
+    "map.filterEdible": "🍽️ Edible",
+    "map.filterMedicinal": "💊 Medicinal",
+    "map.filterToxic": "☠️ Toxic",
+    "map.filterVerified": "✅ Verified"
+  }
+};
+
 function t(key, variables = {}){
-  const template = translations[currentLocale]?.[key] ?? translations.fr[key] ?? key;
+  const template =
+    translations[currentLocale]?.[key]
+    ?? essentialTranslationFallbacks[currentLocale]?.[key]
+    ?? translations.fr?.[key]
+    ?? essentialTranslationFallbacks.fr[key]
+    ?? key;
   return Object.entries(variables).reduce(
     (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
     template
@@ -425,7 +453,9 @@ function translateDocument(){
   document.documentElement.lang = currentLocale;
   document.title = t("app.title");
   document.querySelectorAll("[data-i18n]").forEach(element => {
-    element.textContent = t(element.dataset.i18n);
+    const translated = t(element.dataset.i18n);
+    if(translated === element.dataset.i18n && element.textContent.trim() && element.textContent.trim() !== element.dataset.i18n) return;
+    element.textContent = translated;
   });
   document.querySelectorAll("[data-i18n-placeholder]").forEach(element => {
     element.placeholder = t(element.dataset.i18nPlaceholder);
