@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="assets/vendor/leaflet/MarkerCluster.css">
 <link rel="stylesheet" href="assets/vendor/leaflet/MarkerCluster.Default.css">
-<link rel="stylesheet" href="css/styles.css?v=pwa29">
+<link rel="stylesheet" href="css/styles.css?v=pwa30">
 </head>
 <body>
 <div class="app">
@@ -83,6 +83,7 @@
     <button class="menu-card" onclick="go('identifier')"><span><strong data-i18n="nav.identify"></strong><span data-i18n="menu.identify.description"></span></span><span class="menu-icon menu-loupe" aria-hidden="true">&#128269;</span></button>
     <button class="menu-card" onclick="go('herbier')"><span><strong data-i18n="menu.herbarium.title"></strong><span data-i18n="menu.herbarium.description"></span></span><span class="menu-icon">📖</span></button>
     <button class="menu-card" onclick="go('carte')"><span><strong data-i18n="nav.map">Carte</strong><span data-i18n="menu.map.description"></span></span><span class="menu-icon">🗺️</span></button>
+    <button class="menu-card" onclick="go('sorties')"><span><strong data-i18n="outings.title">Sorties</strong><span data-i18n="menu.outings.description">Balades, jardins et randonnées observés.</span></span><span class="menu-icon">🥾</span></button>
     <button class="menu-card" onclick="go('tableau')"><span><strong data-i18n="dash.title">Tableau de bord</strong><span data-i18n="dash.description"></span></span><span class="menu-icon">📊</span></button>
     <button id="installAppButton" class="secondary install-app hidden" onclick="installApp()" data-i18n="pwa.install"></button>
     <p class="small-note" data-i18n="menu.version"></p>
@@ -219,10 +220,29 @@
         <button class="chip map-filter-chip" data-map-filter="toxic" onclick="setMapFilter('toxic')" data-i18n="map.filterToxic">☠️ Toxiques</button>
         <button class="chip map-filter-chip" data-map-filter="verified" onclick="setMapFilter('verified')" data-i18n="map.filterVerified">✅ Vérifiées</button>
       </div>
+      <div class="map-actions">
+        <button class="secondary compact-action" type="button" onclick="locateOnMap()" data-i18n="map.nearMe">📍 Autour de moi</button>
+        <button class="secondary compact-action" type="button" onclick="go('sorties')" data-i18n="outings.open">🥾 Voir mes sorties</button>
+      </div>
       <p id="mapSummary" class="map-summary"></p>
     </div>
     <div id="discoveryMap" class="discovery-map"></div>
     <p id="mapEmpty" class="small-note hidden" data-i18n="map.empty">Aucune observation géolocalisée pour le moment.</p>
+    <div id="mapOutingHighlights" class="outing-highlights"></div>
+    <div id="mapVisibleList" class="map-visible-list"></div>
+  </div>
+</section>
+
+<section id="sorties" class="screen">
+  <div class="page">
+    <div class="topbar">
+      <button class="back" onclick="goBack('sommaire')" aria-label="Retour">‹</button>
+      <div><p class="kicker" data-i18n="outings.kicker">Carnet de terrain</p><h2 data-i18n="outings.title">Sorties</h2></div>
+      <span></span>
+    </div>
+    <p data-i18n="outings.intro">Retrouve tes balades, jardins et randonnées à partir des observations enregistrées.</p>
+    <div id="outingsGrid" class="outings-grid"></div>
+    <p id="outingsEmpty" class="small-note hidden" data-i18n="outings.empty">Tes sorties apparaîtront dès que tu auras enregistré des observations datées.</p>
   </div>
 </section>
 
@@ -286,7 +306,7 @@
 
 <script src="assets/vendor/leaflet/leaflet.js" charset="UTF-8"></script>
 <script src="assets/vendor/leaflet/leaflet.markercluster.js" charset="UTF-8"></script>
-<script src="js/i18n.js?v=pwa29" charset="UTF-8"></script>
+<script src="js/i18n.js?v=pwa30" charset="UTF-8"></script>
 <script src="js/data/illustrations.js" charset="UTF-8"></script>
 <script src="js/data/plants.js" charset="UTF-8"></script>
 <script src="js/data/knowledge-profiles.js" charset="UTF-8"></script>
@@ -302,7 +322,8 @@
 <script src="js/features/identification.js" charset="UTF-8"></script>
 <script src="js/features/plant-detail.js" charset="UTF-8"></script>
 <script src="js/features/herbarium.js" charset="UTF-8"></script>
-<script src="js/features/map.js?v=pwa29" charset="UTF-8"></script>
+<script src="js/features/map.js?v=pwa30" charset="UTF-8"></script>
+<script src="js/features/outings.js?v=pwa30" charset="UTF-8"></script>
 <script src="js/features/achievements.js" charset="UTF-8"></script>
 <script src="js/features/dashboard.js" charset="UTF-8"></script>
 <script src="js/features/onboarding.js" charset="UTF-8"></script>

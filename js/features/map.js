@@ -48,6 +48,83 @@ function mapPinClass(item){
   return "caution";
 }
 
+function mapPinSymbol(item){
+  if(item.category.verify) return "？";
+  if(item.category.toxic) return "☠";
+  if(item.category.edible) return "🍽";
+  if(item.category.medicinal) return "✚";
+  return "🌿";
+}
+
+function mapFilterDefinitions(){
+  return [
+    {key:"all", label:t("map.filterAll"), match:() => true},
+    {key:"edible", label:t("map.filterEdible"), match:item => item.category.edible},
+    {key:"medicinal", label:t("map.filterMedicinal"), match:item => item.category.medicinal},
+    {key:"toxic", label:t("map.filterToxic"), match:item => item.category.toxic || item.category.status === "toxique"},
+    {key:"verified", label:t("map.filterVerified"), match:item => item.category.verified}
+  ];
+}
+
+function updateMapFilterCounts(allEntries){
+  const filters = mapFilterDefinitions();
+  document.querySelectorAll(".map-filter-chip").forEach(chip => {
+    const definition = filters.find(item => item.key === chip.dataset.mapFilter);
+    if(!definition) return;
+    const count = allEntries.filter(definition.match).length;
+    chip.textContent = `${definition.label} · ${count}`;
+  });
+}
+
+function renderVisibleMapList(entries){
+  const mount = document.getElementById("mapVisibleList");
+  if(!mount) return;
+  if(!entries.length){
+    mount.innerHTML = "";
+    return;
+  }
+  mount.innerHTML = `
+    <p class="section-title">${safeText(t("map.visibleTitle"))}</p>
+    <div class="map-entry-list">
+      ${entries.slice(0, 12).map(item => `
+        <button type="button" class="map-entry-row" onclick="${item.type === "identification" ? `openIdentifiedPlant('${item.id}')` : `openPlant('${item.id}')`}">
+          <span class="map-entry-icon map-entry-icon-${safeText(mapPinClass(item))}">${safeText(mapPinSymbol(item))}</span>
+          <span>
+            <strong>${safeText(item.name)}</strong>
+            <small>${safeText(item.place || t("plant.placeMissing"))}${item.date ? ` · ${safeText(item.date)}` : ""}</small>
+          </span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderMapOutingHighlights(entries){
+  const mount = document.getElementById("mapOutingHighlights");
+  if(!mount) return;
+  if(typeof buildOutingGroups !== "function"){
+    mount.innerHTML = "";
+    return;
+  }
+  const groups = buildOutingGroups(entries);
+  if(!groups.length){
+    mount.innerHTML = "";
+    return;
+  }
+  mount.innerHTML = `
+    <p class="section-title">${safeText(t("outings.latest"))}</p>
+    <div class="outing-mini-list">
+      ${groups.slice(0, 3).map(group => `
+        <button type="button" class="outing-mini-card" onclick="go('sorties')">
+          <span>${safeText(group.icon)}</span>
+          <strong>${safeText(group.title)}</strong>
+          <small>${safeText(t("outings.count", {count:group.items.length}))}</small>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
 function saveMapView(){
   if(!discoveryMap) return;
   try{
@@ -99,6 +176,7 @@ function discoveryEntries(){
       const category = mapEntryCategory(entry, localPlant, profile);
       items.push({
         id, lat, lon,
+        type: "identification",
         name: entry.name || t("status.observation"),
         place: entry.place || "",
         date: entry.date || "",
@@ -121,6 +199,7 @@ function discoveryEntries(){
     });
     items.push({
       id, lat, lon,
+      type: "local",
       name: plant.name,
       place: entry.place || "",
       date: entry.date || "",
@@ -141,6 +220,9 @@ function renderDiscoveryMap(){
 
   const allEntries = discoveryEntries();
   const entries = allEntries.filter(mapEntryMatchesFilter);
+  updateMapFilterCounts(allEntries);
+  renderVisibleMapList(entries);
+  renderMapOutingHighlights(allEntries);
   const summary = document.getElementById("mapSummary");
   if(summary){
     summary.textContent = t("map.summary", {shown:entries.length, total:allEntries.length});
@@ -235,7 +317,7 @@ function renderDiscoveryMap(){
   entries.forEach(item => {
     const icon = L.divIcon({
       className: `map-pin-wrap map-pin-${mapPinClass(item)}`,
-      html: `<span class="map-pin-medallion">${item.iconMarkup}</span>`,
+      html: `<span class="map-pin-medallion">${item.iconMarkup}</span><span class="map-pin-symbol">${safeText(mapPinSymbol(item))}</span>`,
       iconSize: [44, 44],
       iconAnchor: [22, 22],
       popupAnchor: [0, -20]

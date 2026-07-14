@@ -29,6 +29,7 @@ const translations = {
     "menu.herbarium.title": "Mon Herbier",
     "menu.herbarium.description": "Tes découvertes, tes notes et tes observations.",
     "menu.map.description": "Tes découvertes géolocalisées sur une carte interactive.",
+    "menu.outings.description": "Balades, jardins et randonnées observés.",
     "menu.version": "Version alpha 0.3.0 — prototype local.",
     "settings.version": "Version de l'application",
     "pwa.install": "Installer Le Grimoire",
@@ -111,6 +112,8 @@ const translations = {
     "map.openSheet": "Ouvrir la fiche",
     "map.open": "Voir ma carte d’exploration",
     "map.locate": "Me localiser",
+    "map.nearMe": "📍 Autour de moi",
+    "map.visibleTitle": "Plantes visibles sur la carte",
     "map.libraryMissing": "La carte n'a pas pu être chargée. Vérifie ta connexion, puis rouvre cet onglet.",
     "map.filterAll": "🌿 Toutes",
     "map.filterEdible": "🍽️ Comestibles",
@@ -119,6 +122,22 @@ const translations = {
     "map.filterVerified": "✅ Vérifiées",
     "map.summary": "{shown} sur {total} observation(s) affichée(s).",
     "map.emptyFilter": "Aucune observation ne correspond à ce filtre pour le moment.",
+    "outings.kicker": "Carnet de terrain",
+    "outings.title": "Sorties",
+    "outings.open": "🥾 Voir mes sorties",
+    "outings.intro": "Retrouve tes balades, jardins et randonnées à partir des observations enregistrées.",
+    "outings.empty": "Tes sorties apparaîtront dès que tu auras enregistré des observations datées.",
+    "outings.latest": "Dernières sorties",
+    "outings.cardKicker": "Page de sortie",
+    "outings.typeGarden": "Sortie jardin du {date}",
+    "outings.typeHike": "Randonnée du {date}",
+    "outings.typeSea": "Balade bord de mer du {date}",
+    "outings.typeWalk": "Balade du {date}",
+    "outings.count": "{count} plante(s)",
+    "outings.geoCount": "{count} point(s) GPS",
+    "outings.photoCount": "{count} photo(s)",
+    "outings.noMap": "Aucun point GPS pour cette sortie.",
+    "outings.mapPreview": "Aperçu des points observés",
     "identify.kicker": "La loupe du Botaniste",
     "identify.intro": "Photographie une plante ou choisis des images dans ta galerie. Pour un meilleur résultat, ajoute plusieurs vues de la même plante.",
     "identify.pick": "📷 Choisir ou prendre des photos",
@@ -307,7 +326,7 @@ const translations = {
     "safety.disclaimer": "Medicinal and culinary information is provided for guidance only. Never consume a plant without reliable identification and professional advice.", "preface.next": "Turn the page →",
     "menu.kicker": "Several paths await you", "menu.title": "Contents", "nav.explore": "Explore", "nav.identify": "Identify", "nav.herbarium": "Herbarium", "nav.settings": "Settings", "nav.home": "Home", "nav.map": "Map",
     "menu.explore.description": "Discover plants and their botanical pages.", "menu.identify.description": "Observe a plant through the Botanist’s lens.",
-    "menu.herbarium.title": "My Herbarium", "menu.herbarium.description": "Your discoveries, notes and observations.", "menu.map.description": "Your geolocated discoveries on an interactive map.", "menu.version": "Alpha version 0.3.0 — local prototype.", "settings.version": "App version", "pwa.install": "Install The Grimoire", "pwa.updateAvailable": "A new version of the Grimoire is available.", "pwa.updateNow": "Reload", "pwa.updateDismiss": "Dismiss",
+    "menu.herbarium.title": "My Herbarium", "menu.herbarium.description": "Your discoveries, notes and observations.", "menu.map.description": "Your geolocated discoveries on an interactive map.", "menu.outings.description": "Walks, gardens and hikes you observed.", "menu.version": "Alpha version 0.3.0 — local prototype.", "settings.version": "App version", "pwa.install": "Install The Grimoire", "pwa.updateAvailable": "A new version of the Grimoire is available.", "pwa.updateNow": "Reload", "pwa.updateDismiss": "Dismiss",
     "offline.banner": "Hiking mode: the network is unavailable, your observations will be kept for later.", "offline.addObservation": "Observe", "offline.title": "Hiking mode", "offline.statusUnknown": "Prepare the app before leaving: pages, herbarium and the waiting queue will remain available offline.", "offline.ready": "Ready for hiking since {date}. Observations will be kept if the network disappears.", "offline.preparing": "The Grimoire is preparing its pages for the trail…", "offline.prepare": "Prepare", "offline.prepared": "Hiking mode ready: you can go observe.", "offline.prepareFailed": "Preparation incomplete. Open the app with network access and try again.", "offline.unsupported": "This browser does not support offline preparation yet.", "offline.nowOffline": "Hiking mode active: observations will be kept for later.", "offline.backOnline": "Connection restored: waiting observations can be processed.", "offline.identifyOffline": "Keep until network returns",
     "explore.kicker": "Plant library", "explore.search": "Search for a plant...", "filter.all": "All", "filter.edible": "Edible", "filter.caution": "Caution", "filter.aromatic": "Aromatic", "filter.medicinal": "Medicinal", "filter.bloomingNow": "Blooming this month",
     "onboarding.skip": "Skip", "onboarding.next": "Next", "onboarding.start": "Get started",
@@ -332,8 +351,9 @@ const translations = {
     "achv.tagger.title": "Archivist", "achv.tagger.desc": "Classify an observation with a tag.",
     "map.kicker": "Geographic notebook", "map.title": "Exploration map", "map.intro": "Find your geolocated discoveries and return to their page with a single tap.", "map.help": "Geolocated plants appear here. Tap a marker to open its page.",
     "map.empty": "No geolocated discovery yet. Add a place to a plant in your herbarium to see it appear here.",
-    "map.openSheet": "Open page", "map.open": "View my exploration map", "map.locate": "Locate me", "map.libraryMissing": "The map could not load. Check your connection, then reopen this tab.",
+    "map.openSheet": "Open page", "map.open": "View my exploration map", "map.locate": "Locate me", "map.nearMe": "📍 Around me", "map.visibleTitle": "Plants visible on the map", "map.libraryMissing": "The map could not load. Check your connection, then reopen this tab.",
     "map.filterAll": "🌿 All", "map.filterEdible": "🍽️ Edible", "map.filterMedicinal": "💊 Medicinal", "map.filterToxic": "☠️ Toxic", "map.filterVerified": "✅ Verified", "map.summary": "{shown} of {total} observation(s) shown.", "map.emptyFilter": "No observation matches this filter yet.",
+    "outings.kicker": "Field notebook", "outings.title": "Outings", "outings.open": "🥾 View my outings", "outings.intro": "Find your walks, gardens and hikes from saved observations.", "outings.empty": "Your outings will appear as soon as you save dated observations.", "outings.latest": "Latest outings", "outings.cardKicker": "Outing page", "outings.typeGarden": "Garden outing on {date}", "outings.typeHike": "Hike on {date}", "outings.typeSea": "Seaside walk on {date}", "outings.typeWalk": "Walk on {date}", "outings.count": "{count} plant(s)", "outings.geoCount": "{count} GPS point(s)", "outings.photoCount": "{count} photo(s)", "outings.noMap": "No GPS point for this outing.", "outings.mapPreview": "Observed points preview",
     "identify.kicker": "The Botanist’s lens", "identify.intro": "Photograph a plant or choose images from your gallery. For better results, add several views of the same plant.",
     "identify.pick": "📷 Choose or take photos", "identify.pickGallery": "Gallery", "identify.pickCamera": "Camera", "identify.help": "Choose 1 to 5 photos from the camera or gallery: flower, fruit, leaf or whole plant.", "identify.submit": "Identify a plant",
     "queue.saveLater": "📥 Save for later", "queue.title": "Photos waiting", "queue.summary": "{count} observation(s) waiting to be identified. Tap to start processing.",
@@ -474,6 +494,8 @@ function setLocale(locale){
   translateDocument();
   if(typeof renderPlants === "function") renderPlants();
   if(typeof renderCollection === "function") renderCollection();
+  if(document.getElementById("carte")?.classList.contains("active") && typeof renderDiscoveryMap === "function") renderDiscoveryMap();
+  if(document.getElementById("sorties")?.classList.contains("active") && typeof renderOutings === "function") renderOutings();
   if(typeof refreshCurrentPlantView === "function") refreshCurrentPlantView();
   if(typeof updateOfflineModeUI === "function") updateOfflineModeUI();
 }

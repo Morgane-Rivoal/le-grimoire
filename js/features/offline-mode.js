@@ -1,17 +1,20 @@
 // Mode randonnée : rend l'état hors ligne explicite et prépare les ressources
 // indispensables avant de partir sur le terrain.
-const HIKING_CACHE_NAME = "grimoire-hike-pack-v1";
+const HIKING_CACHE_NAME = "grimoire-hike-pack-v2";
+const HIKING_PREPARED_KEY = `grimoireHikingPackPreparedAt:${HIKING_CACHE_NAME}`;
 const HIKING_CACHE_ASSETS = [
   "/",
   "/le_grimoire.html",
   "/manifest.webmanifest",
   "/css/styles.css",
+  "/css/styles.css?v=pwa30",
   "/assets/vendor/leaflet/leaflet.css",
   "/assets/vendor/leaflet/leaflet.js",
   "/assets/vendor/leaflet/MarkerCluster.css",
   "/assets/vendor/leaflet/MarkerCluster.Default.css",
   "/assets/vendor/leaflet/leaflet.markercluster.js",
   "/js/i18n.js",
+  "/js/i18n.js?v=pwa30",
   "/js/data/illustrations.js",
   "/js/data/plants.js",
   "/js/data/knowledge-profiles.js",
@@ -28,6 +31,9 @@ const HIKING_CACHE_ASSETS = [
   "/js/features/plant-detail.js",
   "/js/features/herbarium.js",
   "/js/features/map.js",
+  "/js/features/map.js?v=pwa30",
+  "/js/features/outings.js",
+  "/js/features/outings.js?v=pwa30",
   "/js/features/achievements.js",
   "/js/features/dashboard.js",
   "/js/features/onboarding.js",
@@ -47,7 +53,7 @@ const HIKING_CACHE_ASSETS = [
 ];
 
 function hikingPackPreparedAt(){
-  const value = localStorage.getItem("grimoireHikingPackPreparedAt");
+  const value = localStorage.getItem(HIKING_PREPARED_KEY);
   return value ? new Date(value) : null;
 }
 
@@ -97,7 +103,7 @@ async function prepareHikingOfflinePack(){
     }
     const cache = await caches.open(HIKING_CACHE_NAME);
     await cache.addAll(HIKING_CACHE_ASSETS);
-    localStorage.setItem("grimoireHikingPackPreparedAt", new Date().toISOString());
+    localStorage.setItem(HIKING_PREPARED_KEY, new Date().toISOString());
     showToast(t("offline.prepared"));
   } catch{
     showToast(t("offline.prepareFailed"));
