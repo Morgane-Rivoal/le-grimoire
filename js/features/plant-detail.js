@@ -439,14 +439,60 @@ async function hydrateObservationPhoto(id, entry){
   try{
     const blob = await getObservationPhoto(id);
     if(blob){
-      activeObservationPhotoUrl = URL.createObjectURL(blob);
-      mount.innerHTML = `<div class="observation-photo"><img src="${activeObservationPhotoUrl}" alt="${safeText(t("photo.observationAlt", {name:entry.name}))}"><span>${t("photo.yours")}</span></div>`;
+      mountIdentificationObservationBlob(id, blob, entry);
       return;
     }
   } catch{}
   mount.innerHTML = entry.imageUrl
     ? `<div class="observation-photo"><img src="${safeText(entry.imageUrl)}" alt="${safeText(t("photo.compareAlt", {name:entry.name}))}"><span>${t("photo.reference")}</span></div>`
     : `<p>${safeText(t("photo.none"))}</p>`;
+}
+
+async function repairStoredObservationPhoto(id, blob){
+  if(!navigator.onLine) return null;
+  try{
+    const file = blob instanceof File
+      ? blob
+      : new File([blob], "photo-observation", {type: blob?.type || "application/octet-stream"});
+    const formData = new FormData();
+    formData.append("image", file, file.name || "photo-observation");
+    const response = await fetch("/api/photo-preview", {method:"POST", body:formData});
+    if(!response.ok) return null;
+    const repaired = await response.blob();
+    const displayBlob = new File([repaired], "photo-observation.jpg", {type: repaired.type || "image/jpeg"});
+    await storeObservationPhoto(id, displayBlob);
+    return displayBlob;
+  } catch{
+    return null;
+  }
+}
+
+function mountIdentificationObservationBlob(id, blob, entry, allowRepair = true){
+  const mount = document.getElementById("observationPhotoMount");
+  if(!mount) return;
+  if(activeObservationPhotoUrl){
+    URL.revokeObjectURL(activeObservationPhotoUrl);
+  }
+  activeObservationPhotoUrl = URL.createObjectURL(blob);
+  const fallbackHtml = entry.imageUrl
+    ? `<div class="observation-photo"><img src="${safeText(entry.imageUrl)}" alt="${safeText(t("photo.compareAlt", {name:entry.name}))}"><span>${t("photo.reference")}</span></div>`
+    : `<p>${safeText(t("photo.none"))}</p>`;
+  mount.innerHTML = `<div class="observation-photo"><img src="${activeObservationPhotoUrl}" alt="${safeText(t("photo.observationAlt", {name:entry.name}))}"><span>${t("photo.yours")}</span></div>`;
+  const image = mount.querySelector("img");
+  if(!image) return;
+  image.onerror = async () => {
+    if(!allowRepair){
+      mount.innerHTML = fallbackHtml;
+      return;
+    }
+    mount.innerHTML = `<p>${safeText(t("photo.repairing"))}</p>`;
+    const repaired = await repairStoredObservationPhoto(id, blob);
+    if(repaired){
+      mountIdentificationObservationBlob(id, repaired, entry, false);
+    } else {
+      mount.innerHTML = fallbackHtml;
+    }
+  };
 }
 
 async function saveIdentifiedPersonal(id){

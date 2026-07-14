@@ -146,6 +146,16 @@ async function prepareQueuedPhotoForUpload(blob, index){
   try{
     return await convertImageToJpeg(file);
   } catch{
+    try{
+      const formData = new FormData();
+      formData.append("image", file, file.name || fallbackName);
+      const response = await fetch("/api/photo-preview", {method:"POST", body:formData});
+      if(response.ok){
+        const previewBlob = await response.blob();
+        const baseName = String(file.name || fallbackName).replace(/\.[^.]+$/, "") || `queue-${index}`;
+        return new File([previewBlob], `${baseName}.jpg`, {type: previewBlob.type || "image/jpeg"});
+      }
+    } catch{}
     return new File([blob], file.name || fallbackName, {type: file.type || blob?.type || "application/octet-stream"});
   }
 }
