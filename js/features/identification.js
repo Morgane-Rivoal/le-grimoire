@@ -53,12 +53,39 @@ function previewPhotos(inputId = "plantPhotos"){
     const card = document.createElement("div");
     card.className = "photo-preview";
     const image = document.createElement("img");
-    image.src = url;
     image.alt = t("photo.selectedAlt");
+    image.onload = () => {
+      if(!card.classList.contains("loading")){
+        card.classList.remove("unreadable");
+        delete card.dataset.label;
+      }
+    };
     image.onerror = () => loadServerPhotoPreview(file, image, card);
     card.appendChild(image);
     preview.appendChild(card);
+
+    if(shouldUseServerPreview(file, inputId)){
+      loadServerPhotoPreview(file, image, card);
+    } else {
+      image.src = url;
+      setTimeout(() => {
+        if(selectedPlantFiles.includes(file) && (!image.complete || !image.naturalWidth)){
+          loadServerPhotoPreview(file, image, card);
+        }
+      }, 700);
+    }
   });
+}
+
+function shouldUseServerPreview(file, inputId){
+  const mimeType = String(file?.type || "").toLowerCase();
+  const extension = fileExtension(file?.name);
+  return inputId === "plantCamera" ||
+    mimeType.includes("heic") ||
+    mimeType.includes("heif") ||
+    extension === "heic" ||
+    extension === "heif" ||
+    (!mimeType && !extension);
 }
 
 async function loadServerPhotoPreview(file, image, card){
