@@ -1909,6 +1909,28 @@ textarea{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.4);
 }
 
+.map-tools{
+  margin:14px 0 10px;
+  padding:12px;
+  border:1px solid rgba(184,146,74,.34);
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(255,248,229,.56),rgba(239,226,191,.28));
+}
+
+.map-filter-chips{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  margin:0;
+  padding:0;
+}
+
+.map-summary{
+  margin:10px 0 0;
+  color:var(--muted);
+  font-size:.88rem;
+  font-weight:800;
+  text-align:center;
+}
+
 .discovery-map .leaflet-container{
   font-family:inherit;
   background:#dfe6d8;
@@ -1949,6 +1971,27 @@ textarea{
   cursor:pointer;
 }
 
+.map-pin-edible .map-pin-medallion{
+  border-color:var(--sage);
+  box-shadow:0 3px 7px rgba(15,32,24,.45),0 0 0 5px rgba(111,140,100,.18);
+}
+
+.map-pin-toxic .map-pin-medallion{
+  border-color:var(--red);
+  box-shadow:0 3px 7px rgba(15,32,24,.45),0 0 0 5px rgba(122,46,46,.17);
+}
+
+.map-pin-medicinal .map-pin-medallion{
+  border-color:#4c7f52;
+  box-shadow:0 3px 7px rgba(15,32,24,.45),0 0 0 5px rgba(76,127,82,.16);
+}
+
+.map-pin-verify .map-pin-medallion{
+  border-color:#9f7b32;
+  box-shadow:0 3px 7px rgba(15,32,24,.45),0 0 0 5px rgba(184,146,74,.2);
+  filter:saturate(.92);
+}
+
 .map-pin-medallion svg,
 .map-pin-medallion img{
   width:100%;
@@ -1973,6 +2016,12 @@ textarea{
 .map-popup span{
   color:var(--muted);
   font-size:.82rem;
+}
+
+.map-popup small{
+  color:#735727;
+  font-size:.76rem;
+  font-weight:800;
 }
 
 .map-popup-open{

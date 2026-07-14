@@ -3,6 +3,49 @@
 let discoveryMap = null;
 let discoveryMarkers = null;
 let userLocationMarker = null;
+let mapFilter = "all";
+
+function setMapFilter(filter){
+  mapFilter = ["all", "comestible", "toxique", "medicinal", "verify"].includes(filter) ? filter : "all";
+  document.querySelectorAll(".map-filter-chip").forEach(chip =>
+    chip.classList.toggle("active", chip.dataset.mapFilter === mapFilter)
+  );
+  renderDiscoveryMap();
+}
+
+function mapEntryCategory(entry, plant, profile){
+  const status = profile?.status || entry?.safetyStatus || plant?.status || "inconnu";
+  const text = [
+    profile?.benefits,
+    profile?.summary,
+    plant?.tradition,
+    plant?.summary,
+    entry?.benefits,
+    entry?.summary
+  ].join(" ");
+  const medicinal = typeof isMedicinalText === "function" ? isMedicinalText(text) : /médicin|medicin|infusion|tisane/i.test(text);
+  const verify = entry?.type === "identification" && (entry.needsVerification || Number(entry.score || 0) < 50);
+  const toxic = status === "toxique" || /toxique|toxic|ne pas consommer|do not consume/i.test(`${profile?.edibility || ""} ${entry?.edibility || ""}`);
+  const edible = status === "comestible";
+  return {status, medicinal, verify, toxic, edible};
+}
+
+function mapEntryMatchesFilter(item){
+  if(mapFilter === "all") return true;
+  if(mapFilter === "comestible") return item.category.edible;
+  if(mapFilter === "toxique") return item.category.toxic || (!item.category.edible && item.category.status !== "comestible");
+  if(mapFilter === "medicinal") return item.category.medicinal;
+  if(mapFilter === "verify") return item.category.verify || item.category.status === "inconnu";
+  return true;
+}
+
+function mapPinClass(item){
+  if(item.category.verify) return "verify";
+  if(item.category.toxic) return "toxic";
+  if(item.category.edible) return "edible";
+  if(item.category.medicinal) return "medicinal";
+  return "caution";
+}
 
 function saveMapView(){
   if(!discoveryMap) return;
@@ -50,10 +93,17 @@ function discoveryEntries(){
     if(!Number.isFinite(lat) || !Number.isFinite(lon)) return;
     if(lat === 0 && lon === 0) return;
     if(entry.type === "identification"){
+      const localPlant = plants.find(plant => plant.id === entry.localPlantId);
+      const profile = knowledgeForSpecies(entry, localPlant);
+      const category = mapEntryCategory(entry, localPlant, profile);
       items.push({
         id, lat, lon,
-        name: entry.name || t("image.observation"),
+        name: entry.name || t("status.observation"),
         place: entry.place || "",
+        date: entry.date || "",
+        score: entry.score || 0,
+        statusLabel: category.verify ? t("result.verify") : (profile.edibility || t("status.observation")),
+        category,
         iconMarkup: plantPlateMarkup(entry),
         open: () => openIdentifiedPlant(id)
       });
@@ -62,10 +112,20 @@ function discoveryEntries(){
     const sourcePlant = plants.find(plant => plant.id === id);
     if(!sourcePlant) return;
     const plant = localizedPlant(sourcePlant);
+    const category = mapEntryCategory(entry, plant, {
+      status: plant.status,
+      edibility: t(plant.status === "comestible" ? "status.edible" : "status.caution"),
+      benefits: plant.tradition,
+      summary: plant.summary
+    });
     items.push({
       id, lat, lon,
       name: plant.name,
       place: entry.place || "",
+      date: entry.date || "",
+      score: "",
+      statusLabel: t(plant.status === "comestible" ? "status.edible" : "status.caution"),
+      category,
       iconMarkup: plantStaticImageMarkup(plant),
       open: () => openPlant(id)
     });
@@ -78,7 +138,12 @@ function renderDiscoveryMap(){
   const empty = document.getElementById("mapEmpty");
   if(!container || !empty) return;
 
-  const entries = discoveryEntries();
+  const allEntries = discoveryEntries();
+  const entries = allEntries.filter(mapEntryMatchesFilter);
+  const summary = document.getElementById("mapSummary");
+  if(summary){
+    summary.textContent = t("map.summary", {shown:entries.length, total:allEntries.length});
+  }
 
   if(typeof L === "undefined"){
     empty.textContent = t("map.libraryMissing");
@@ -87,8 +152,15 @@ function renderDiscoveryMap(){
     return;
   }
 
-  if(!entries.length){
+  if(!allEntries.length){
     empty.textContent = t("map.empty");
+    empty.style.display = "block";
+    container.style.display = "none";
+    return;
+  }
+
+  if(!entries.length){
+    empty.textContent = t("map.emptyFilter");
     empty.style.display = "block";
     container.style.display = "none";
     return;
@@ -153,7 +225,7 @@ function renderDiscoveryMap(){
   const bounds = [];
   entries.forEach(item => {
     const icon = L.divIcon({
-      className: "map-pin-wrap",
+      className: `map-pin-wrap map-pin-${mapPinClass(item)}`,
       html: `<span class="map-pin-medallion">${item.iconMarkup}</span>`,
       iconSize: [44, 44],
       iconAnchor: [22, 22],
@@ -164,6 +236,8 @@ function renderDiscoveryMap(){
       `<div class="map-popup">
         <strong>${safeText(item.name)}</strong>
         <span>${safeText(item.place || t("plant.placeMissing"))}</span>
+        <small>${safeText(item.statusLabel || "")}${item.score ? ` · ${safeText(t("plant.confidence", {score:item.score}))}` : ""}</small>
+        ${item.date ? `<small>${safeText(item.date)}</small>` : ""}
         <button type="button" class="map-popup-open">${t("map.openSheet")}</button>
       </div>`
     );

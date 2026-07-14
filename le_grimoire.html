@@ -211,7 +211,17 @@
       <span></span>
     </div>
     <p data-i18n="map.help">Les plantes géolocalisées apparaissent ici. Touchez un repère pour ouvrir sa fiche.</p>
-    <div id="explorationMap" class="exploration-map" role="region" aria-label="Carte des observations"></div>
+    <div class="map-tools">
+      <div class="chips map-filter-chips" role="group" aria-label="Filtres de la carte">
+        <button class="chip map-filter-chip active" data-map-filter="all" onclick="setMapFilter('all')" data-i18n="filter.all"></button>
+        <button class="chip map-filter-chip" data-map-filter="comestible" onclick="setMapFilter('comestible')" data-i18n="filter.edible"></button>
+        <button class="chip map-filter-chip" data-map-filter="toxique" onclick="setMapFilter('toxique')" data-i18n="map.filterToxic"></button>
+        <button class="chip map-filter-chip" data-map-filter="medicinal" onclick="setMapFilter('medicinal')" data-i18n="filter.medicinal"></button>
+        <button class="chip map-filter-chip" data-map-filter="verify" onclick="setMapFilter('verify')" data-i18n="map.filterVerify"></button>
+      </div>
+      <p id="mapSummary" class="map-summary"></p>
+    </div>
+    <div id="discoveryMap" class="discovery-map"></div>
     <p id="mapEmpty" class="small-note hidden" data-i18n="map.empty">Aucune observation géolocalisée pour le moment.</p>
   </div>
 </section>
