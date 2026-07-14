@@ -51,14 +51,13 @@ function previewPhotos(inputId = "plantPhotos"){
     const url = URL.createObjectURL(file);
     previewUrls.push(url);
     const card = document.createElement("div");
-    card.className = "photo-preview";
+    card.className = "photo-preview loading";
+    card.dataset.label = t("photo.previewPreparing");
     const image = document.createElement("img");
     image.alt = t("photo.selectedAlt");
     image.onload = () => {
-      if(!card.classList.contains("loading")){
-        card.classList.remove("unreadable");
-        delete card.dataset.label;
-      }
+      card.classList.remove("loading", "unreadable");
+      delete card.dataset.label;
     };
     image.onerror = () => loadServerPhotoPreview(file, image, card);
     card.appendChild(image);
@@ -89,9 +88,10 @@ function shouldUseServerPreview(file, inputId){
 }
 
 async function loadServerPhotoPreview(file, image, card){
-  if(!navigator.onLine || file.grimoirePreviewLoading) return;
+  if(file.grimoirePreviewLoading) return;
   file.grimoirePreviewLoading = true;
   card.classList.add("loading");
+  card.classList.remove("unreadable");
   card.dataset.label = t("photo.previewPreparing");
   try{
     const formData = new FormData();
@@ -103,10 +103,16 @@ async function loadServerPhotoPreview(file, image, card){
     file.grimoirePreviewBlob = blob;
     const previewUrl = URL.createObjectURL(blob);
     previewUrls.push(previewUrl);
-    image.onerror = null;
+    image.onerror = () => {
+      card.classList.remove("loading");
+      card.classList.add("unreadable");
+      card.dataset.label = t("photo.previewUnavailable");
+    };
+    image.onload = () => {
+      card.classList.remove("loading", "unreadable");
+      delete card.dataset.label;
+    };
     image.src = previewUrl;
-    card.classList.remove("loading");
-    delete card.dataset.label;
   } catch{
     card.classList.remove("loading");
     card.classList.add("unreadable");

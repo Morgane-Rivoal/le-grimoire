@@ -95,15 +95,25 @@ function isProbablyHeic(part) {
   const filename = String(part.filename || "").toLowerCase();
   const contentType = String(part.contentType || "").toLowerCase();
   const brand = part.data.slice(4, 12).toString("latin1").toLowerCase();
+  const majorBrand = part.data.slice(8, 12).toString("latin1").toLowerCase();
+  const compatibleBrands = part.data.slice(8, 48).toString("latin1").toLowerCase();
   return /\.(heic|heif)$/i.test(filename) ||
     contentType.includes("heic") ||
     contentType.includes("heif") ||
+    contentType.includes("avif") ||
     brand.startsWith("ftypheic") ||
+    brand.startsWith("ftypheif") ||
     brand.startsWith("ftypheix") ||
+    brand.startsWith("ftypheim") ||
+    brand.startsWith("ftypheis") ||
     brand.startsWith("ftyphevc") ||
     brand.startsWith("ftyphevx") ||
     brand.startsWith("ftypmif1") ||
-    brand.startsWith("ftypmsf1");
+    brand.startsWith("ftypmsf1") ||
+    brand.startsWith("ftypavif") ||
+    brand.startsWith("ftypavis") ||
+    ["heic", "heif", "heix", "heim", "heis", "hevc", "hevx", "mif1", "msf1", "avif", "avis"].includes(majorBrand) ||
+    /hei[cfxms]|hev[ctx]|mif1|msf1|avif|avis/.test(compatibleBrands);
 }
 
 function jpegFilename(filename) {
