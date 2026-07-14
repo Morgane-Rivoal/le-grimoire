@@ -59,32 +59,34 @@ function previewPhotos(inputId = "plantPhotos"){
       card.classList.remove("loading", "unreadable");
       delete card.dataset.label;
     };
-    image.onerror = () => loadServerPhotoPreview(file, image, card);
+    image.onerror = () => loadDataUrlPhotoPreview(file, image, card);
     card.appendChild(image);
     preview.appendChild(card);
 
-    if(shouldUseServerPreview(file, inputId)){
-      loadServerPhotoPreview(file, image, card);
-    } else {
-      image.src = url;
-      setTimeout(() => {
-        if(selectedPlantFiles.includes(file) && (!image.complete || !image.naturalWidth)){
-          loadServerPhotoPreview(file, image, card);
-        }
-      }, 700);
-    }
+    image.src = url;
+    setTimeout(() => {
+      if(selectedPlantFiles.includes(file) && (!image.complete || !image.naturalWidth)){
+        loadDataUrlPhotoPreview(file, image, card);
+      }
+    }, 700);
   });
 }
 
-function shouldUseServerPreview(file, inputId){
-  const mimeType = String(file?.type || "").toLowerCase();
-  const extension = fileExtension(file?.name);
-  return inputId === "plantCamera" ||
-    mimeType.includes("heic") ||
-    mimeType.includes("heif") ||
-    extension === "heic" ||
-    extension === "heif" ||
-    (!mimeType && !extension);
+function loadDataUrlPhotoPreview(file, image, card){
+  if(file.grimoireDataUrlPreviewLoading) return;
+  file.grimoireDataUrlPreviewLoading = true;
+  const reader = new FileReader();
+  reader.onload = () => {
+    if(!selectedPlantFiles.includes(file)) return;
+    image.onerror = () => loadServerPhotoPreview(file, image, card);
+    image.src = reader.result;
+    file.grimoireDataUrlPreviewLoading = false;
+  };
+  reader.onerror = () => {
+    file.grimoireDataUrlPreviewLoading = false;
+    loadServerPhotoPreview(file, image, card);
+  };
+  reader.readAsDataURL(file);
 }
 
 async function loadServerPhotoPreview(file, image, card){
